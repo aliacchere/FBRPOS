@@ -1,203 +1,147 @@
 <?php
 /**
- * DPS POS FBR Integrated - Installation Script
+ * DPS POS FBR Integrated - Main Installation Script
  */
 
-// Set content type to JSON
 header('Content-Type: application/json');
-
-// Check if this is a POST request
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'error' => 'Method not allowed']);
-    exit;
-}
 
 // Get POST data
 $data = json_decode(file_get_contents('php://input'), true);
 
 if (!$data) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid JSON data']);
+    echo json_encode(['success' => false, 'error' => 'Invalid request data']);
     exit;
 }
 
 try {
-    // Step 1: Test database connection
-    $db_config = [
-        'host' => $data['db_host'],
-        'username' => $data['db_username'],
-        'password' => $data['db_password'],
-        'database' => $data['db_name']
-    ];
+    // Step 1: Create database configuration
+    createDatabaseConfig($data['database']);
+    
+    // Step 2: Run database migrations
+    runDatabaseMigrations($data['database']);
+    
+    // Step 3: Create super admin user
+    createSuperAdmin($data['admin']);
+    
+    // Step 4: Seed initial data
+    seedInitialData();
+    
+    // Step 5: Create application configuration
+    createApplicationConfig($data);
+    
+    // Step 6: Create necessary directories
+    createDirectories();
+    
+    // Step 7: Create .htaccess files
+    createHtaccessFiles();
+    
+    // Step 8: Create installation lock
+    createInstallationLock();
+    
+    echo json_encode([
+        'success' => true,
+        'message' => 'Installation completed successfully!',
+        'admin_email' => $data['admin']['email']
+    ]);
 
-    $dsn = "mysql:host={$db_config['host']};charset=utf8mb4";
-    $pdo = new PDO($dsn, $db_config['username'], $db_config['password'], [
+} catch (Exception $e) {
+    error_log("Installation Error: " . $e->getMessage());
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => $e->getMessage()
+    ]);
+}
+
+function createDatabaseConfig($dbConfig) {
+    $configContent = "<?php\n";
+    $configContent .= "/**\n";
+    $configContent .= " * DPS POS FBR Integrated - Database Configuration\n";
+    $configContent .= " * Generated during installation\n";
+    $configContent .= " */\n\n";
+    $configContent .= "return [\n";
+    $configContent .= "    'default' => 'mysql',\n";
+    $configContent .= "    'connections' => [\n";
+    $configContent .= "        'mysql' => [\n";
+    $configContent .= "            'driver' => 'mysql',\n";
+    $configContent .= "            'host' => '{$dbConfig['host']}',\n";
+    $configContent .= "            'port' => '3306',\n";
+    $configContent .= "            'database' => '{$dbConfig['name']}',\n";
+    $configContent .= "            'username' => '{$dbConfig['username']}',\n";
+    $configContent .= "            'password' => '{$dbConfig['password']}',\n";
+    $configContent .= "            'charset' => 'utf8mb4',\n";
+    $configContent .= "            'collation' => 'utf8mb4_unicode_ci',\n";
+    $configContent .= "            'prefix' => '',\n";
+    $configContent .= "            'strict' => true,\n";
+    $configContent .= "            'engine' => null,\n";
+    $configContent .= "        ],\n";
+    $configContent .= "    ],\n";
+    $configContent .= "];\n";
+    
+    $configDir = dirname(__DIR__) . '/config';
+    if (!is_dir($configDir)) {
+        mkdir($configDir, 0755, true);
+    }
+    
+    file_put_contents($configDir . '/database.php', $configContent);
+}
+
+function runDatabaseMigrations($dbConfig) {
+    $dsn = "mysql:host={$dbConfig['host']};dbname={$dbConfig['name']};charset=utf8mb4";
+    $pdo = new PDO($dsn, $dbConfig['username'], $dbConfig['password'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
         PDO::ATTR_EMULATE_PREPARES => false,
     ]);
-
-    // Create database if it doesn't exist
-    $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$db_config['database']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-    $pdo->exec("USE `{$db_config['database']}`");
-
-    // Step 2: Create database tables
-    $sql_file = __DIR__ . '/database.sql';
-    if (!file_exists($sql_file)) {
+    
+    // Read and execute database schema
+    $schemaFile = __DIR__ . '/database_schema.sql';
+    if (!file_exists($schemaFile)) {
         throw new Exception('Database schema file not found');
     }
-
-    $sql = file_get_contents($sql_file);
+    
+    $sql = file_get_contents($schemaFile);
     $statements = explode(';', $sql);
-
+    
     foreach ($statements as $statement) {
         $statement = trim($statement);
         if (!empty($statement)) {
             $pdo->exec($statement);
         }
     }
+}
 
-    // Step 3: Create configuration files
-    $config_dir = dirname(__DIR__) . '/config';
-    if (!is_dir($config_dir)) {
-        mkdir($config_dir, 0755, true);
-    }
-
-    // Create database.php
-    $db_config_content = "<?php\n";
-    $db_config_content .= "/**\n";
-    $db_config_content .= " * DPS POS FBR Integrated - Database Configuration\n";
-    $db_config_content .= " * Generated during installation\n";
-    $db_config_content .= " */\n\n";
-    $db_config_content .= "// Database Configuration\n";
-    $db_config_content .= "\$db_config = [\n";
-    $db_config_content .= "    'host' => '{$data['db_host']}',\n";
-    $db_config_content .= "    'username' => '{$data['db_username']}',\n";
-    $db_config_content .= "    'password' => '{$data['db_password']}',\n";
-    $db_config_content .= "    'database' => '{$data['db_name']}',\n";
-    $db_config_content .= "    'charset' => 'utf8mb4',\n";
-    $db_config_content .= "    'collation' => 'utf8mb4_unicode_ci'\n";
-    $db_config_content .= "];\n\n";
-    $db_config_content .= "// Create PDO connection\n";
-    $db_config_content .= "try {\n";
-    $db_config_content .= "    \$dsn = \"mysql:host={\$db_config['host']};dbname={\$db_config['database']};charset={\$db_config['charset']}\";\n";
-    $db_config_content .= "    \$pdo = new PDO(\$dsn, \$db_config['username'], \$db_config['password'], [\n";
-    $db_config_content .= "        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,\n";
-    $db_config_content .= "        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,\n";
-    $db_config_content .= "        PDO::ATTR_EMULATE_PREPARES => false,\n";
-    $db_config_content .= "    ]);\n";
-    $db_config_content .= "} catch (PDOException \$e) {\n";
-    $db_config_content .= "    die(\"Database connection failed: \" . \$e->getMessage());\n";
-    $db_config_content .= "}\n\n";
-    $db_config_content .= "// Database helper functions\n";
-    $db_config_content .= "function db_query(\$sql, \$params = []) {\n";
-    $db_config_content .= "    global \$pdo;\n";
-    $db_config_content .= "    try {\n";
-    $db_config_content .= "        \$stmt = \$pdo->prepare(\$sql);\n";
-    $db_config_content .= "        \$stmt->execute(\$params);\n";
-    $db_config_content .= "        return \$stmt;\n";
-    $db_config_content .= "    } catch (PDOException \$e) {\n";
-    $db_config_content .= "        error_log(\"Database query error: \" . \$e->getMessage());\n";
-    $db_config_content .= "        return false;\n";
-    $db_config_content .= "    }\n";
-    $db_config_content .= "}\n\n";
-    $db_config_content .= "function db_fetch(\$sql, \$params = []) {\n";
-    $db_config_content .= "    \$stmt = db_query(\$sql, \$params);\n";
-    $db_config_content .= "    return \$stmt ? \$stmt->fetch() : false;\n";
-    $db_config_content .= "}\n\n";
-    $db_config_content .= "function db_fetch_all(\$sql, \$params = []) {\n";
-    $db_config_content .= "    \$stmt = db_query(\$sql, \$params);\n";
-    $db_config_content .= "    return \$stmt ? \$stmt->fetchAll() : false;\n";
-    $db_config_content .= "}\n\n";
-    $db_config_content .= "function db_insert(\$table, \$data) {\n";
-    $db_config_content .= "    global \$pdo;\n";
-    $db_config_content .= "    \$columns = implode(',', array_keys(\$data));\n";
-    $db_config_content .= "    \$placeholders = ':' . implode(', :', array_keys(\$data));\n";
-    $db_config_content .= "    \$sql = \"INSERT INTO {\$table} ({\$columns}) VALUES ({\$placeholders})\";\n";
-    $db_config_content .= "    \$stmt = db_query(\$sql, \$data);\n";
-    $db_config_content .= "    return \$stmt ? \$pdo->lastInsertId() : false;\n";
-    $db_config_content .= "}\n\n";
-    $db_config_content .= "function db_update(\$table, \$data, \$where, \$where_params = []) {\n";
-    $db_config_content .= "    \$set_clause = [];\n";
-    $db_config_content .= "    foreach (\$data as \$key => \$value) {\n";
-    $db_config_content .= "        \$set_clause[] = \"{\$key} = :{\$key}\";\n";
-    $db_config_content .= "    }\n";
-    $db_config_content .= "    \$set_clause = implode(', ', \$set_clause);\n";
-    $db_config_content .= "    \$sql = \"UPDATE {\$table} SET {\$set_clause} WHERE {\$where}\";\n";
-    $db_config_content .= "    \$params = array_merge(\$data, \$where_params);\n";
-    $db_config_content .= "    return db_query(\$sql, \$params);\n";
-    $db_config_content .= "}\n\n";
-    $db_config_content .= "function db_delete(\$table, \$where, \$params = []) {\n";
-    $db_config_content .= "    \$sql = \"DELETE FROM {\$table} WHERE {\$where}\";\n";
-    $db_config_content .= "    return db_query(\$sql, \$params);\n";
-    $db_config_content .= "}\n";
-
-    file_put_contents($config_dir . '/database.php', $db_config_content);
-
-    // Update app.php with installation data
-    $app_config_content = file_get_contents(dirname(__DIR__) . '/config/app.php');
-    $app_config_content = str_replace('http://localhost/dpspos', $data['app_url'], $app_config_content);
-    $app_config_content = str_replace('your-32-character-secret-key-here', $data['encryption_key'], $app_config_content);
-    $app_config_content = str_replace('', $data['whatsapp_number'], $app_config_content);
-    $app_config_content = str_replace('Asia/Karachi', $data['timezone'], $app_config_content);
+function createSuperAdmin($adminData) {
+    $dsn = "mysql:host=localhost;dbname=dpspos_fbr;charset=utf8mb4";
+    $pdo = new PDO($dsn, 'root', '', [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
     
-    file_put_contents($config_dir . '/app.php', $app_config_content);
-
-    // Step 4: Create super admin user
-    $admin_password = password_hash($data['admin_password'], PASSWORD_DEFAULT);
+    $password = password_hash($adminData['password'], PASSWORD_DEFAULT);
     
-    $admin_data = [
-        'name' => $data['admin_name'],
-        'email' => $data['admin_email'],
-        'password' => $admin_password,
-        'role' => 'super_admin',
-        'tenant_id' => null,
-        'is_active' => 1,
-        'created_at' => date('Y-m-d H:i:s')
-    ];
+    $stmt = $pdo->prepare("
+        INSERT INTO users (name, email, password, role, is_active, email_verified_at, created_at, updated_at) 
+        VALUES (?, ?, ?, 'super_admin', 1, NOW(), NOW(), NOW())
+    ");
+    
+    $stmt->execute([
+        $adminData['name'],
+        $adminData['email'],
+        $password
+    ]);
+}
 
-    $admin_id = db_insert('users', $admin_data);
-
-    if (!$admin_id) {
-        throw new Exception('Failed to create super admin user');
-    }
-
-    // Step 5: Create upload directories
-    $upload_dirs = [
-        'uploads/',
-        'uploads/tenants/',
-        'uploads/products/',
-        'uploads/logos/',
-        'uploads/receipts/'
-    ];
-
-    foreach ($upload_dirs as $dir) {
-        $full_path = dirname(__DIR__) . '/' . $dir;
-        if (!is_dir($full_path)) {
-            mkdir($full_path, 0755, true);
-        }
-    }
-
-    // Step 6: Create .htaccess files for security
-    $htaccess_content = "Options -Indexes\n";
-    $htaccess_content .= "RewriteEngine On\n";
-    $htaccess_content .= "RewriteCond %{REQUEST_FILENAME} !-f\n";
-    $htaccess_content .= "RewriteCond %{REQUEST_FILENAME} !-d\n";
-    $htaccess_content .= "RewriteRule ^(.*)$ index.php [QSA,L]\n";
-
-    file_put_contents(dirname(__DIR__) . '/.htaccess', $htaccess_content);
-
-    // Step 7: Create installation lock file
-    $lock_content = "<?php\n";
-    $lock_content .= "// DPS POS FBR Integrated - Installation Lock\n";
-    $lock_content .= "// This file prevents re-installation\n";
-    $lock_content .= "// Delete this file to re-run installation\n";
-    $lock_content .= "define('INSTALLATION_LOCK', true);\n";
-
-    file_put_contents($config_dir . '/install.lock', $lock_content);
-
-    // Step 8: Create sample data
+function seedInitialData() {
+    $dsn = "mysql:host=localhost;dbname=dpspos_fbr;charset=utf8mb4";
+    $pdo = new PDO($dsn, 'root', '', [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
+    
     // Insert default provinces
     $provinces = [
         ['name' => 'Punjab', 'code' => 'PUN'],
@@ -208,11 +152,12 @@ try {
         ['name' => 'Azad Jammu and Kashmir', 'code' => 'AJK'],
         ['name' => 'Gilgit-Baltistan', 'code' => 'GB']
     ];
-
+    
     foreach ($provinces as $province) {
-        db_insert('provinces', $province);
+        $stmt = $pdo->prepare("INSERT INTO provinces (name, code, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+        $stmt->execute([$province['name'], $province['code']]);
     }
-
+    
     // Insert default units of measure
     $uom = [
         ['name' => 'Numbers, pieces, units', 'code' => 'PCE'],
@@ -226,13 +171,14 @@ try {
         ['name' => 'Gross', 'code' => 'GRO'],
         ['name' => 'Box', 'code' => 'BX']
     ];
-
+    
     foreach ($uom as $unit) {
-        db_insert('units_of_measure', $unit);
+        $stmt = $pdo->prepare("INSERT INTO units_of_measure (name, code, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+        $stmt->execute([$unit['name'], $unit['code']]);
     }
-
+    
     // Insert default HS codes
-    $hs_codes = [
+    $hsCodes = [
         ['code' => '0101.2100', 'description' => 'Live horses, asses, mules and hinnies'],
         ['code' => '0102.2100', 'description' => 'Live bovine animals'],
         ['code' => '0103.2100', 'description' => 'Live swine'],
@@ -244,22 +190,88 @@ try {
         ['code' => '0204.2100', 'description' => 'Meat of sheep or goats, fresh, chilled or frozen'],
         ['code' => '0205.2100', 'description' => 'Meat of horses, asses, mules or hinnies, fresh, chilled or frozen']
     ];
-
-    foreach ($hs_codes as $hs_code) {
-        db_insert('hs_codes', $hs_code);
+    
+    foreach ($hsCodes as $hsCode) {
+        $stmt = $pdo->prepare("INSERT INTO hs_codes (code, description, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
+        $stmt->execute([$hsCode['code'], $hsCode['description']]);
     }
+}
 
-    echo json_encode([
-        'success' => true,
-        'message' => 'Installation completed successfully!',
-        'admin_id' => $admin_id
-    ]);
+function createApplicationConfig($data) {
+    $appConfig = "<?php\n";
+    $appConfig .= "return [\n";
+    $appConfig .= "    'name' => 'DPS POS FBR Integrated',\n";
+    $appConfig .= "    'env' => 'production',\n";
+    $appConfig .= "    'debug' => false,\n";
+    $appConfig .= "    'url' => '" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "',\n";
+    $appConfig .= "    'timezone' => 'Asia/Karachi',\n";
+    $appConfig .= "    'locale' => 'en',\n";
+    $appConfig .= "    'fallback_locale' => 'en',\n";
+    $appConfig .= "    'key' => '" . bin2hex(random_bytes(32)) . "',\n";
+    $appConfig .= "    'cipher' => 'AES-256-CBC',\n";
+    $appConfig .= "    'providers' => [\n";
+    $appConfig .= "        // Service providers\n";
+    $appConfig .= "    ],\n";
+    $appConfig .= "    'aliases' => [\n";
+    $appConfig .= "        // Class aliases\n";
+    $appConfig .= "    ],\n";
+    $appConfig .= "];\n";
+    
+    $configDir = dirname(__DIR__) . '/config';
+    file_put_contents($configDir . '/app.php', $appConfig);
+}
 
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => $e->getMessage()
-    ]);
+function createDirectories() {
+    $directories = [
+        'storage/app',
+        'storage/framework/cache',
+        'storage/framework/sessions',
+        'storage/framework/views',
+        'storage/logs',
+        'public/uploads',
+        'public/uploads/products',
+        'public/uploads/customers',
+        'public/uploads/suppliers',
+        'public/uploads/employees',
+        'public/uploads/receipts',
+        'public/uploads/backups'
+    ];
+    
+    foreach ($directories as $dir) {
+        $fullPath = dirname(__DIR__) . '/' . $dir;
+        if (!is_dir($fullPath)) {
+            mkdir($fullPath, 0755, true);
+        }
+    }
+}
+
+function createHtaccessFiles() {
+    // Main .htaccess
+    $htaccess = "RewriteEngine On\n";
+    $htaccess .= "RewriteCond %{REQUEST_FILENAME} !-f\n";
+    $htaccess .= "RewriteCond %{REQUEST_FILENAME} !-d\n";
+    $htaccess .= "RewriteRule ^(.*)$ public/index.php [QSA,L]\n";
+    
+    file_put_contents(dirname(__DIR__) . '/.htaccess', $htaccess);
+    
+    // Public .htaccess
+    $publicHtaccess = "Options -Indexes\n";
+    $publicHtaccess .= "RewriteEngine On\n";
+    $publicHtaccess .= "RewriteCond %{REQUEST_FILENAME} !-f\n";
+    $publicHtaccess .= "RewriteCond %{REQUEST_FILENAME} !-d\n";
+    $publicHtaccess .= "RewriteRule ^(.*)$ index.php [QSA,L]\n";
+    
+    file_put_contents(dirname(__DIR__) . '/public/.htaccess', $publicHtaccess);
+}
+
+function createInstallationLock() {
+    $lockContent = "<?php\n";
+    $lockContent .= "// DPS POS FBR Integrated - Installation Lock\n";
+    $lockContent .= "// This file prevents re-installation\n";
+    $lockContent .= "// Delete this file to re-run installation\n";
+    $lockContent .= "define('INSTALLATION_LOCK', true);\n";
+    $lockContent .= "define('INSTALLATION_DATE', '" . date('Y-m-d H:i:s') . "');\n";
+    
+    file_put_contents(dirname(__DIR__) . '/config/install.lock', $lockContent);
 }
 ?>

@@ -1,8 +1,17 @@
 <?php
+// Disable error display to prevent HTML output
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Set proper headers
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
+
+// Start output buffering to catch any unexpected output
+ob_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
@@ -64,6 +73,9 @@ try {
     // Step 7: Create installation lock file
     createInstallationLock();
     
+    // Clean any output buffer before sending response
+    ob_clean();
+    
     echo json_encode([
         'success' => true,
         'message' => 'Installation completed successfully',
@@ -77,10 +89,21 @@ try {
     ]);
     
 } catch (Exception $e) {
+    // Clean any output buffer
+    ob_clean();
+    
     echo json_encode([
         'success' => false,
-        'message' => 'Installation failed: ' . $e->getMessage()
+        'message' => 'Installation failed: ' . $e->getMessage(),
+        'error_details' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]
     ]);
+} finally {
+    // Clean and end output buffer
+    ob_end_clean();
 }
 
 function createDatabaseTables($pdo) {
@@ -329,6 +352,96 @@ function createDatabaseTables($pdo) {
         // Constraint might already exist
     }
     
+    // Locations table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS locations (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            address TEXT NULL,
+            city VARCHAR(100) NULL,
+            state VARCHAR(100) NULL,
+            country VARCHAR(100) DEFAULT 'Pakistan',
+            postal_code VARCHAR(20) NULL,
+            phone VARCHAR(20) NULL,
+            email VARCHAR(255) NULL,
+            manager_name VARCHAR(255) NULL,
+            manager_phone VARCHAR(20) NULL,
+            manager_email VARCHAR(255) NULL,
+            is_main BOOLEAN DEFAULT FALSE,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_is_main (is_main),
+            INDEX idx_is_active (is_active)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'locations';
+    
+    // Location inventory table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS location_inventory (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            location_id BIGINT UNSIGNED NOT NULL,
+            product_id BIGINT UNSIGNED NOT NULL,
+            stock_quantity INT NOT NULL DEFAULT 0,
+            min_stock_level INT NOT NULL DEFAULT 0,
+            reorder_level INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_location_id (location_id),
+            INDEX idx_product_id (product_id),
+            UNIQUE KEY unique_location_product (location_id, product_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'location_inventory';
+    
+    // Inventory transfers table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS inventory_transfers (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            from_location_id BIGINT UNSIGNED NOT NULL,
+            to_location_id BIGINT UNSIGNED NOT NULL,
+            product_id BIGINT UNSIGNED NOT NULL,
+            quantity INT NOT NULL,
+            notes TEXT NULL,
+            status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_from_location (from_location_id),
+            INDEX idx_to_location (to_location_id),
+            INDEX idx_product_id (product_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'inventory_transfers';
+    
+    // Add location_id to users table
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN location_id BIGINT UNSIGNED NULL");
+        $pdo->exec("ALTER TABLE users ADD CONSTRAINT fk_users_location FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL");
+    } catch (PDOException $e) {
+        // Column might already exist
+    }
+    
+    // Add location_id to products table
+    try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN location_id BIGINT UNSIGNED NULL");
+        $pdo->exec("ALTER TABLE products ADD CONSTRAINT fk_products_location FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL");
+    } catch (PDOException $e) {
+        // Column might already exist
+    }
+    
+    // Add location_id to sales table
+    try {
+        $pdo->exec("ALTER TABLE sales ADD COLUMN location_id BIGINT UNSIGNED NULL");
+        $pdo->exec("ALTER TABLE sales ADD CONSTRAINT fk_sales_location FOREIGN KEY (location_id) REFERENCES locations(id) ON DELETE SET NULL");
+    } catch (PDOException $e) {
+        // Column might already exist
+    }
+    
     // Insert sample data
     insertSampleData($pdo, $tenantId);
     
@@ -400,6 +513,32 @@ function insertSampleData($pdo, $tenantId) {
     foreach ($products as $product) {
         $stmt = $pdo->prepare("INSERT INTO products (tenant_id, name, sku, barcode, price, cost, stock_quantity, min_stock_level, category_id, supplier_id, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
         $stmt->execute([$tenantId, $product[0], $product[1], $product[2], $product[3], $product[4], $product[5], $product[6], $product[7], $product[8], $product[9]]);
+    }
+    
+    // Insert sample locations
+    $locations = [
+        ['Main Store', '123 Main Street, Karachi', 'Karachi', 'Sindh', 'Pakistan', '75000', '+92-21-1234567', 'main@store.com', 'Ahmed Ali', '+92-300-1111111', 'ahmed@store.com', 1],
+        ['Branch Store', '456 Branch Road, Lahore', 'Lahore', 'Punjab', 'Pakistan', '54000', '+92-42-2345678', 'branch@store.com', 'Sara Khan', '+92-300-2222222', 'sara@store.com', 0],
+        ['Outlet Store', '789 Outlet Avenue, Islamabad', 'Islamabad', 'Federal', 'Pakistan', '44000', '+92-51-3456789', 'outlet@store.com', 'Ali Hassan', '+92-300-3333333', 'ali@store.com', 0]
+    ];
+    
+    foreach ($locations as $location) {
+        $stmt = $pdo->prepare("INSERT INTO locations (tenant_id, name, address, city, state, country, postal_code, phone, email, manager_name, manager_phone, manager_email, is_main, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$tenantId, $location[0], $location[1], $location[2], $location[3], $location[4], $location[5], $location[6], $location[7], $location[8], $location[9], $location[10], $location[11]]);
+    }
+    
+    // Get location IDs for inventory setup
+    $stmt = $pdo->prepare("SELECT id FROM locations WHERE tenant_id = ? ORDER BY id");
+    $stmt->execute([$tenantId]);
+    $locationIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Create inventory for each location
+    foreach ($locationIds as $locationId) {
+        foreach ($products as $index => $product) {
+            $stockQuantity = $index < 3 ? 10 : 5; // Different stock levels for demo
+            $stmt = $pdo->prepare("INSERT INTO location_inventory (location_id, product_id, stock_quantity, min_stock_level, reorder_level, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$locationId, $index + 1, $stockQuantity, 2, 5]);
+        }
     }
 }
 

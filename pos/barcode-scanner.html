@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Scanner - DPS POS FBR Integrated</title>
+    <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            font-family: Arial, sans-serif;
+        }
+        
+        .scanner-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .scanner-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .scanner-header h1 {
+            color: #333;
+            margin: 0 0 10px 0;
+        }
+        
+        .scanner-header p {
+            color: #666;
+            margin: 0;
+        }
+        
+        #scanner {
+            width: 100%;
+            height: 300px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 100px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+        
+        .scanner-overlay::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            animation: scan 2s linear infinite;
+        }
+        
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        
+        .scanner-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        
+        .scanner-status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        
+        .status-ready {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-scanning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .scanned-results {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .scanned-results h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-code {
+            font-family: monospace;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .result-time {
+            color: #6c757d;
+            font-size: 12px;
+        }
+        
+        .manual-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .manual-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        .manual-input button {
+            padding: 12px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .manual-input button:hover {
+            background: #1e7e34;
+        }
+        
+        .clear-btn {
+            width: 100%;
+            padding: 12px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        .clear-btn:hover {
+            background: #c82333;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanner-container">
+        <div class="scanner-header">
+            <h1>Barcode Scanner</h1>
+            <p>Position barcode within the scanning area</p>
+        </div>
+        
+        <div id="scanner">
+            <div class="scanner-overlay"></div>
+        </div>
+        
+        <div id="scanner-status" class="scanner-status status-ready">
+            Ready to scan
+        </div>
+        
+        <div class="scanner-controls">
+            <button id="start-btn" class="btn btn-primary">Start Scanner</button>
+            <button id="stop-btn" class="btn btn-secondary" disabled>Stop Scanner</button>
+            <button id="switch-camera-btn" class="btn btn-success">Switch Camera</button>
+        </div>
+        
+        <div class="manual-input">
+            <input type="text" id="manual-input" placeholder="Enter barcode manually">
+            <button id="manual-add-btn">Add</button>
+        </div>
+        
+        <div class="scanned-results">
+            <h3>Scanned Codes</h3>
+            <div id="results-list"></div>
+        </div>
+        
+        <button id="clear-btn" class="clear-btn">Clear All</button>
+    </div>
+
+    <script>
+        class BarcodeScanner {
+            constructor() {
+                this.isScanning = false;
+                this.currentCamera = 0;
+                this.cameras = [];
+                this.scannedCodes = [];
+                
+                this.initializeElements();
+                this.bindEvents();
+                this.detectCameras();
+            }
+            
+            initializeElements() {
+                this.scannerElement = document.getElementById('scanner');
+                this.statusElement = document.getElementById('scanner-status');
+                this.startBtn = document.getElementById('start-btn');
+                this.stopBtn = document.getElementById('stop-btn');
+                this.switchCameraBtn = document.getElementById('switch-camera-btn');
+                this.manualInput = document.getElementById('manual-input');
+                this.manualAddBtn = document.getElementById('manual-add-btn');
+                this.resultsList = document.getElementById('results-list');
+                this.clearBtn = document.getElementById('clear-btn');
+            }
+            
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.startScanner());
+                this.stopBtn.addEventListener('click', () => this.stopScanner());
+                this.switchCameraBtn.addEventListener('click', () => this.switchCamera());
+                this.manualAddBtn.addEventListener('click', () => this.addManualCode());
+                this.manualInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.addManualCode();
+                });
+                this.clearBtn.addEventListener('click', () => this.clearResults());
+            }
+            
+            async detectCameras() {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    this.cameras = devices.filter(device => device.kind === 'videoinput');
+                    console.log('Available cameras:', this.cameras.length);
+                } catch (error) {
+                    console.error('Error detecting cameras:', error);
+                }
+            }
+            
+            startScanner() {
+                if (this.isScanning) return;
+                
+                this.updateStatus('Initializing scanner...', 'status-scanning');
+                
+                const config = {
+                    inputStream: {
+                        name: "Live",
+                        type: "LiveStream",
+                        target: this.scannerElement,
+                        constraints: {
+                            width: 640,
+                            height: 480,
+                            facingMode: "environment"
+                        }
+                    },
+                    locator: {
+                        patchSize: "medium",
+                        halfSample: true
+                    },
+                    numOfWorkers: 2,
+                    frequency: 10,
+                    decoder: {
+                        readers: [
+                            "code_128_reader",
+                            "ean_reader",
+                            "ean_8_reader",
+                            "code_39_reader",
+                            "code_39_vin_reader",
+                            "codabar_reader",
+                            "upc_reader",
+                            "upc_e_reader",
+                            "i2of5_reader"
+                        ]
+                    },
+                    locate: true
+                };
+                
+                // Add camera selection if available
+                if (this.cameras.length > 0) {
+                    config.inputStream.constraints.deviceId = this.cameras[this.currentCamera].deviceId;
+                }
+                
+                Quagga.init(config, (err) => {
+                    if (err) {
+                        console.error('Error initializing Quagga:', err);
+                        this.updateStatus('Error initializing scanner', 'status-error');
+                        return;
+                    }
+                    
+                    Quagga.start();
+                    this.isScanning = true;
+                    this.updateStatus('Scanner active - Position barcode in view', 'status-scanning');
+                    this.updateButtons();
+                });
+                
+                Quagga.onDetected((data) => {
+                    const code = data.codeResult.code;
+                    this.addScannedCode(code);
+                });
+            }
+            
+            stopScanner() {
+                if (!this.isScanning) return;
+                
+                Quagga.stop();
+                this.isScanning = false;
+                this.updateStatus('Scanner stopped', 'status-ready');
+                this.updateButtons();
+            }
+            
+            switchCamera() {
+                if (this.cameras.length <= 1) {
+                    alert('Only one camera available');
+                    return;
+                }
+                
+                this.currentCamera = (this.currentCamera + 1) % this.cameras.length;
+                
+                if (this.isScanning) {
+                    this.stopScanner();
+                    setTimeout(() => this.startScanner(), 500);
+                }
+            }
+            
+            addManualCode() {
+                const code = this.manualInput.value.trim();
+                if (code) {
+                    this.addScannedCode(code);
+                    this.manualInput.value = '';
+                }
+            }
+            
+            addScannedCode(code) {
+                // Check if code already exists
+                if (this.scannedCodes.some(item => item.code === code)) {
+                    this.updateStatus('Code already scanned', 'status-error');
+                    return;
+                }
+                
+                const scannedItem = {
+                    code: code,
+                    timestamp: new Date(),
+                    id: Date.now()
+                };
+                
+                this.scannedCodes.unshift(scannedItem);
+                this.updateResultsList();
+                this.updateStatus(`Scanned: ${code}`, 'status-ready');
+                
+                // Send to parent window if in iframe
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'barcode_scanned',
+                        code: code
+                    }, '*');
+                }
+            }
+            
+            updateResultsList() {
+                this.resultsList.innerHTML = '';
+                
+                if (this.scannedCodes.length === 0) {
+                    this.resultsList.innerHTML = '<p style="color: #6c757d; text-align: center; margin: 0;">No codes scanned yet</p>';
+                    return;
+                }
+                
+                this.scannedCodes.forEach(item => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'result-item';
+                    resultItem.innerHTML = `
+                        <span class="result-code">${item.code}</span>
+                        <span class="result-time">${item.timestamp.toLocaleTimeString()}</span>
+                    `;
+                    this.resultsList.appendChild(resultItem);
+                });
+            }
+            
+            clearResults() {
+                this.scannedCodes = [];
+                this.updateResultsList();
+                this.updateStatus('Results cleared', 'status-ready');
+            }
+            
+            updateStatus(message, className) {
+                this.statusElement.textContent = message;
+                this.statusElement.className = `scanner-status ${className}`;
+            }
+            
+            updateButtons() {
+                this.startBtn.disabled = this.isScanning;
+                this.stopBtn.disabled = !this.isScanning;
+                this.switchCameraBtn.disabled = this.cameras.length <= 1;
+            }
+        }
+        
+        // Initialize scanner when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new BarcodeScanner();
+        });
+        
+        // Handle messages from parent window
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'start_scanner') {
+                document.getElementById('start-btn').click();
+            } else if (event.data.type === 'stop_scanner') {
+                document.getElementById('stop-btn').click();
+            }
+        });
+    </script>
+</body>
+</html>

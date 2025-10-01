@@ -153,6 +153,18 @@ if (isset($_GET['logout'])) {
                     <i class="fas fa-arrow-right mr-2"></i>Manage Users
                 </button>
             </div>
+            
+            <!-- Locations -->
+            <div class="glass-effect rounded-lg p-6 text-center card-hover">
+                <div class="text-4xl text-white mb-4">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">Locations</h3>
+                <p class="text-white opacity-75 text-sm mb-4">Manage multiple store locations</p>
+                <button onclick="openLocations()" class="bg-white text-indigo-600 px-6 py-2 rounded-lg hover:bg-gray-100 transition-all">
+                    <i class="fas fa-arrow-right mr-2"></i>Manage Locations
+                </button>
+            </div>
         </div>
         
         <!-- Quick Stats -->
@@ -219,6 +231,10 @@ if (isset($_GET['logout'])) {
         
         function openUsers() {
             window.location.href = '/users/';
+        }
+        
+        function openLocations() {
+            window.location.href = '/locations/';
         }
     </script>
 </body>

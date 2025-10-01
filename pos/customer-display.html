@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Display - DPS POS FBR Integrated</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .customer-display {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .current-sale {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .sale-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .sale-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .sale-number {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+        
+        .items-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        
+        .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-name {
+            font-size: 1.3rem;
+            font-weight: 500;
+        }
+        
+        .item-details {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .item-quantity {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        
+        .item-price {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #4ade80;
+        }
+        
+        .totals {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        
+        .total-line:last-child {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #4ade80;
+            border-top: 2px solid rgba(255, 255, 255, 0.3);
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        
+        .payment-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .payment-method {
+            font-size: 1.4rem;
+            margin-bottom: 10px;
+        }
+        
+        .payment-status {
+            font-size: 1.2rem;
+            padding: 10px 20px;
+            border-radius: 25px;
+            display: inline-block;
+        }
+        
+        .status-processing {
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+            border: 2px solid #ffc107;
+        }
+        
+        .status-completed {
+            background: rgba(40, 167, 69, 0.3);
+            color: #28a745;
+            border: 2px solid #28a745;
+        }
+        
+        .status-error {
+            background: rgba(220, 53, 69, 0.3);
+            color: #dc3545;
+            border: 2px solid #dc3545;
+        }
+        
+        .welcome-message {
+            text-align: center;
+            padding: 50px 20px;
+        }
+        
+        .welcome-message h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+        
+        .welcome-message p {
+            font-size: 1.3rem;
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+        
+        .promotions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .promotions h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .promotion-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .promotion-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .promotion-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .promotion-desc {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .item-name {
+                font-size: 1.1rem;
+            }
+            
+            .item-price {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="customer-display">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="welcome-message fade-in">
+            <div class="header">
+                <h1>Welcome to DPS POS</h1>
+                <p>Your trusted point of sale system</p>
+            </div>
+            
+            <div class="promotions">
+                <h3>Today's Special Offers</h3>
+                <div class="promotion-item">
+                    <div class="promotion-title">20% Off Electronics</div>
+                    <div class="promotion-desc">Valid on all electronic items</div>
+                </div>
+                <div class="promotion-item">
+                    <div class="promotion-title">Buy 2 Get 1 Free</div>
+                    <div class="promotion-desc">On selected clothing items</div>
+                </div>
+                <div class="promotion-item">
+                    <div class="promotion-title">Free Delivery</div>
+                    <div class="promotion-desc">On orders over Rs. 5000</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Current Sale Screen -->
+        <div id="sale-screen" class="current-sale hidden">
+            <div class="sale-header">
+                <div class="sale-title">Current Sale</div>
+                <div class="sale-number" id="sale-number">#INV-001</div>
+            </div>
+            
+            <div class="items-list" id="items-list">
+                <!-- Items will be populated here -->
+            </div>
+            
+            <div class="totals">
+                <div class="total-line">
+                    <span>Subtotal:</span>
+                    <span id="subtotal">Rs. 0.00</span>
+                </div>
+                <div class="total-line">
+                    <span>Tax (16%):</span>
+                    <span id="tax">Rs. 0.00</span>
+                </div>
+                <div class="total-line">
+                    <span>Discount:</span>
+                    <span id="discount">Rs. 0.00</span>
+                </div>
+                <div class="total-line">
+                    <span>Total:</span>
+                    <span id="total">Rs. 0.00</span>
+                </div>
+            </div>
+            
+            <div class="payment-info">
+                <div class="payment-method" id="payment-method">Payment Method: Cash</div>
+                <div class="payment-status status-processing" id="payment-status">Processing...</div>
+            </div>
+        </div>
+        
+        <!-- Loading Screen -->
+        <div id="loading-screen" class="loading hidden">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <script>
+        class CustomerDisplay {
+            constructor() {
+                this.currentSale = null;
+                this.isConnected = false;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 5;
+                
+                this.initializeDisplay();
+                this.startConnection();
+            }
+            
+            initializeDisplay() {
+                // Show welcome screen initially
+                this.showWelcomeScreen();
+                
+                // Set up event listeners for window messages
+                window.addEventListener('message', (event) => {
+                    this.handleMessage(event.data);
+                });
+                
+                // Set up periodic updates
+                setInterval(() => {
+                    this.updateDisplay();
+                }, 1000);
+            }
+            
+            startConnection() {
+                // Try to connect to parent window
+                if (window.parent !== window) {
+                    this.isConnected = true;
+                    this.requestUpdate();
+                } else {
+                    // Simulate connection for demo
+                    this.simulateDemo();
+                }
+            }
+            
+            handleMessage(data) {
+                switch (data.type) {
+                    case 'sale_started':
+                        this.showSaleScreen();
+                        this.updateSale(data.sale);
+                        break;
+                    case 'sale_updated':
+                        this.updateSale(data.sale);
+                        break;
+                    case 'sale_completed':
+                        this.completeSale(data.sale);
+                        break;
+                    case 'sale_cancelled':
+                        this.cancelSale();
+                        break;
+                    case 'payment_processing':
+                        this.updatePaymentStatus('processing');
+                        break;
+                    case 'payment_completed':
+                        this.updatePaymentStatus('completed');
+                        break;
+                    case 'payment_failed':
+                        this.updatePaymentStatus('error');
+                        break;
+                }
+            }
+            
+            showWelcomeScreen() {
+                document.getElementById('welcome-screen').classList.remove('hidden');
+                document.getElementById('sale-screen').classList.add('hidden');
+                document.getElementById('loading-screen').classList.add('hidden');
+            }
+            
+            showSaleScreen() {
+                document.getElementById('welcome-screen').classList.add('hidden');
+                document.getElementById('sale-screen').classList.remove('hidden');
+                document.getElementById('loading-screen').classList.add('hidden');
+                
+                // Add slide-in animation
+                document.getElementById('sale-screen').classList.add('slide-in');
+            }
+            
+            showLoadingScreen() {
+                document.getElementById('welcome-screen').classList.add('hidden');
+                document.getElementById('sale-screen').classList.add('hidden');
+                document.getElementById('loading-screen').classList.remove('hidden');
+            }
+            
+            updateSale(sale) {
+                this.currentSale = sale;
+                
+                // Update sale number
+                document.getElementById('sale-number').textContent = `#${sale.invoice_number || 'INV-001'}`;
+                
+                // Update items list
+                const itemsList = document.getElementById('items-list');
+                itemsList.innerHTML = '';
+                
+                if (sale.items && sale.items.length > 0) {
+                    sale.items.forEach(item => {
+                        const itemElement = document.createElement('div');
+                        itemElement.className = 'item slide-in';
+                        itemElement.innerHTML = `
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-details">
+                                <div class="item-quantity">Qty: ${item.quantity}</div>
+                                <div class="item-price">Rs. ${item.total_price.toFixed(2)}</div>
+                            </div>
+                        `;
+                        itemsList.appendChild(itemElement);
+                    });
+                } else {
+                    itemsList.innerHTML = '<div class="item"><div class="item-name">No items in cart</div></div>';
+                }
+                
+                // Update totals
+                document.getElementById('subtotal').textContent = `Rs. ${(sale.subtotal || 0).toFixed(2)}`;
+                document.getElementById('tax').textContent = `Rs. ${(sale.tax_amount || 0).toFixed(2)}`;
+                document.getElementById('discount').textContent = `Rs. ${(sale.discount_amount || 0).toFixed(2)}`;
+                document.getElementById('total').textContent = `Rs. ${(sale.total_amount || 0).toFixed(2)}`;
+                
+                // Update payment method
+                document.getElementById('payment-method').textContent = `Payment Method: ${sale.payment_method || 'Cash'}`;
+            }
+            
+            updatePaymentStatus(status) {
+                const statusElement = document.getElementById('payment-status');
+                statusElement.className = `payment-status status-${status}`;
+                
+                switch (status) {
+                    case 'processing':
+                        statusElement.textContent = 'Processing...';
+                        statusElement.classList.add('pulse');
+                        break;
+                    case 'completed':
+                        statusElement.textContent = 'Payment Completed';
+                        statusElement.classList.remove('pulse');
+                        break;
+                    case 'error':
+                        statusElement.textContent = 'Payment Failed';
+                        statusElement.classList.remove('pulse');
+                        break;
+                }
+            }
+            
+            completeSale(sale) {
+                this.updateSale(sale);
+                this.updatePaymentStatus('completed');
+                
+                // Show completion message for a few seconds
+                setTimeout(() => {
+                    this.showWelcomeScreen();
+                }, 5000);
+            }
+            
+            cancelSale() {
+                this.showWelcomeScreen();
+            }
+            
+            requestUpdate() {
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'request_sale_update'
+                    }, '*');
+                }
+            }
+            
+            updateDisplay() {
+                // Update time display or other dynamic elements
+                const now = new Date();
+                // You can add time display or other updates here
+            }
+            
+            simulateDemo() {
+                // Simulate a demo sale for testing
+                setTimeout(() => {
+                    this.showSaleScreen();
+                    this.updateSale({
+                        invoice_number: 'INV-DEMO-001',
+                        items: [
+                            { name: 'Samsung Galaxy S21', quantity: 1, total_price: 150000.00 },
+                            { name: 'iPhone 13', quantity: 1, total_price: 180000.00 },
+                            { name: 'Nike T-Shirt', quantity: 2, total_price: 5000.00 }
+                        ],
+                        subtotal: 335000.00,
+                        tax_amount: 53600.00,
+                        discount_amount: 0.00,
+                        total_amount: 388600.00,
+                        payment_method: 'Card'
+                    });
+                    
+                    setTimeout(() => {
+                        this.updatePaymentStatus('processing');
+                    }, 2000);
+                    
+                    setTimeout(() => {
+                        this.updatePaymentStatus('completed');
+                    }, 5000);
+                    
+                    setTimeout(() => {
+                        this.showWelcomeScreen();
+                    }, 8000);
+                }, 3000);
+            }
+        }
+        
+        // Initialize customer display when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CustomerDisplay();
+        });
+        
+        // Handle visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                // Page became visible, request update
+                if (window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'request_sale_update'
+                    }, '*');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

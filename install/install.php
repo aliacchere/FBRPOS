@@ -298,13 +298,36 @@ function createDatabaseTables($pdo) {
     $tables[] = 'customers';
     
     // Update products table to include additional fields
-    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS category_id BIGINT UNSIGNED NULL");
-    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id BIGINT UNSIGNED NULL");
-    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT NULL");
+    try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN category_id BIGINT UNSIGNED NULL");
+    } catch (PDOException $e) {
+        // Column might already exist
+    }
+    
+    try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN supplier_id BIGINT UNSIGNED NULL");
+    } catch (PDOException $e) {
+        // Column might already exist
+    }
+    
+    try {
+        $pdo->exec("ALTER TABLE products ADD COLUMN description TEXT NULL");
+    } catch (PDOException $e) {
+        // Column might already exist
+    }
     
     // Add foreign key constraints
-    $pdo->exec("ALTER TABLE products ADD CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL");
-    $pdo->exec("ALTER TABLE products ADD CONSTRAINT fk_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL");
+    try {
+        $pdo->exec("ALTER TABLE products ADD CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL");
+    } catch (PDOException $e) {
+        // Constraint might already exist
+    }
+    
+    try {
+        $pdo->exec("ALTER TABLE products ADD CONSTRAINT fk_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL");
+    } catch (PDOException $e) {
+        // Constraint might already exist
+    }
     
     // Insert sample data
     insertSampleData($pdo, $tenantId);

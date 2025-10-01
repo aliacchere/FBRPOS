@@ -202,7 +202,7 @@ if (isset($_GET['logout'])) {
         }
         
         function openFBR() {
-            alert('FBR Integration settings will be available in the next update!');
+            window.location.href = '/fbr/';
         }
         
         function openReports() {
@@ -210,7 +210,7 @@ if (isset($_GET['logout'])) {
         }
         
         function openSettings() {
-            alert('Settings panel will be available in the next update!');
+            window.location.href = '/settings/';
         }
         
         function openCustomers() {
@@ -218,7 +218,7 @@ if (isset($_GET['logout'])) {
         }
         
         function openUsers() {
-            alert('User management will be available in the next update!');
+            window.location.href = '/users/';
         }
     </script>
 </body>

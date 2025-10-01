@@ -1,3 +1,47 @@
+<?php
+require_once 'includes/auth.php';
+
+// Handle login form submission
+$error = '';
+$success = '';
+
+if ($_POST) {
+    $email = $_POST['email'] ?? '';
+    $password = $_POST['password'] ?? '';
+    
+    if (empty($email) || empty($password)) {
+        $error = 'Please enter both email and password';
+    } else {
+        try {
+            $pdo = getDatabaseConnection();
+            $auth = new Auth($pdo);
+            $result = $auth->login($email, $password);
+            
+            if ($result['success']) {
+                header('Location: /admin/');
+                exit;
+            } else {
+                $error = $result['message'];
+            }
+        } catch (Exception $e) {
+            $error = 'Login failed: ' . $e->getMessage();
+        }
+    }
+}
+
+// Check if already logged in
+try {
+    $pdo = getDatabaseConnection();
+    $auth = new Auth($pdo);
+    if ($auth->isLoggedIn()) {
+        header('Location: /admin/');
+        exit;
+    }
+} catch (Exception $e) {
+    // Database connection failed, show login form
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,10 +73,30 @@
                 <p class="text-white opacity-75 mt-2">Login to your account</p>
             </div>
             
-            <form class="space-y-6">
+            <?php if ($error): ?>
+                <div class="bg-red-500 bg-opacity-20 border border-red-400 rounded-lg p-4 mb-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-circle text-red-400 mr-3"></i>
+                        <span class="text-red-200"><?php echo htmlspecialchars($error); ?></span>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($success): ?>
+                <div class="bg-green-500 bg-opacity-20 border border-green-400 rounded-lg p-4 mb-6">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-400 mr-3"></i>
+                        <span class="text-green-200"><?php echo htmlspecialchars($success); ?></span>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <form method="POST" class="space-y-6">
                 <div>
                     <label class="block text-white font-medium mb-2">Email Address</label>
                     <input type="email" 
+                           name="email"
+                           value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
                            class="w-full px-4 py-3 rounded-lg border-0 focus:ring-2 focus:ring-indigo-500" 
                            placeholder="admin@example.com" required>
                 </div>
@@ -40,6 +104,7 @@
                 <div>
                     <label class="block text-white font-medium mb-2">Password</label>
                     <input type="password" 
+                           name="password"
                            class="w-full px-4 py-3 rounded-lg border-0 focus:ring-2 focus:ring-indigo-500" 
                            placeholder="Enter your password" required>
                 </div>
@@ -53,7 +118,7 @@
             <div class="mt-6 text-center">
                 <p class="text-white opacity-75 text-sm">
                     <i class="fas fa-info-circle mr-1"></i>
-                    Installation completed successfully! You can now login with your admin credentials.
+                    Use the admin credentials you created during installation.
                 </p>
             </div>
         </div>

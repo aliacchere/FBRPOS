@@ -1,45 +1,25 @@
 <?php
-/**
- * DPS POS FBR Integrated - Main Entry Point
- * A Premier Multi-Tenant SaaS POS Platform for Pakistani Businesses
- */
-
-// Check if installation is required
-if (!file_exists('config/database.php')) {
-    header('Location: install/');
-    exit;
+// Load environment variables
+if (file_exists('.env')) {
+    $lines = file('.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+        
+        list($name, $value) = explode('=', $line, 2);
+        $_ENV[trim($name)] = trim($value);
+    }
 }
 
-// Start session
-session_start();
-
-// Include configuration
-require_once 'config/database.php';
-require_once 'config/app.php';
-require_once 'includes/functions.php';
-
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
+// Check if installation is complete
+if (file_exists('storage/installed.lock')) {
+    // Installation is complete, redirect to login
+    header('Location: /login.php');
     exit;
-}
-
-// Route based on user role
-$user_role = $_SESSION['user_role'];
-$tenant_id = $_SESSION['tenant_id'];
-
-switch ($user_role) {
-    case 'super_admin':
-        header('Location: admin/dashboard.php');
-        break;
-    case 'tenant_admin':
-        header('Location: tenant/dashboard.php');
-        break;
-    case 'cashier':
-        header('Location: pos/sales.php');
-        break;
-    default:
-        header('Location: login.php');
-        break;
+} else {
+    // Installation not complete, redirect to installer
+    header('Location: /install/');
+    exit;
 }
 ?>

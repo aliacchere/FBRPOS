@@ -1,0 +1,278 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String?
+  address     String?
+  province    String?
+  businessName String
+  businessAddress String
+  businessProvince String
+  fbrToken    String?  // Encrypted FBR API token
+  fbrBaseUrl  String?  // FBR API base URL
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       User[]
+  products    Product[]
+  customers   Customer[]
+  sales       Sale[]
+  categories  Category[]
+  settings    ClientSettings?
+
+  @@map("clients")
+}
+
+model ClientSettings {
+  id                String  @id @default(cuid())
+  clientId          String  @unique
+  currency          String  @default("PKR")
+  taxRate           Float   @default(17.0)
+  lowStockThreshold Int     @default(10)
+  invoicePrefix     String  @default("INV")
+  invoiceNumber     Int     @default(1)
+  timezone          String  @default("Asia/Karachi")
+  dateFormat        String  @default("DD/MM/YYYY")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("client_settings")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole @default(CASHIER)
+  isActive  Boolean  @default(true)
+  clientId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sales  Sale[]
+
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  clientId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  client   Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id              String   @id @default(cuid())
+  name            String
+  sku             String
+  description     String?
+  categoryId      String?
+  purchasePrice   Float
+  sellingPrice    Float
+  currentStock    Int      @default(0)
+  minStockLevel   Int      @default(0)
+  maxStockLevel   Int?
+  
+  // FBR Integration Fields
+  hsCode          String?  // HS Code for FBR
+  uom             String?  // Unit of Measure
+  taxRate         Float    @default(17.0)
+  sroScheduleNo   String?
+  sroItemSerialNo String?
+  
+  isActive        Boolean  @default(true)
+  clientId        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  client     Client      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  category   Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  saleItems  SaleItem[]
+
+  @@unique([sku, clientId])
+  @@map("products")
+}
+
+model Customer {
+  id                String   @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  address           String?
+  
+  // FBR Integration Fields
+  buyerNTNCNIC      String?  // NTN or CNIC
+  buyerBusinessName String?
+  buyerProvince     String?
+  buyerAddress      String?
+  
+  isActive          Boolean  @default(true)
+  clientId          String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  sales  Sale[]
+
+  @@map("customers")
+}
+
+model Sale {
+  id                String      @id @default(cuid())
+  invoiceNumber     String      @unique
+  invoiceType       String      @default("SALE") // SALE, DEBIT, CREDIT
+  invoiceDate       DateTime    @default(now())
+  subtotal          Float
+  taxAmount         Float
+  discountAmount    Float
+  totalAmount       Float
+  paymentMethod     PaymentMethod @default(CASH)
+  paymentStatus     PaymentStatus @default(COMPLETED)
+  notes             String?
+  
+  // FBR Integration Fields
+  fbrInvoiceNumber  String?     // FBR issued invoice number
+  fbrDated         DateTime?    // FBR timestamp
+  fbrStatus        FBRStatus   @default(PENDING)
+  fbrError         String?     // FBR error message if any
+  
+  // Hold/Resume functionality
+  isHeld           Boolean     @default(false)
+  heldAt           DateTime?
+  
+  clientId         String
+  customerId       String?
+  userId           String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relations
+  client     Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  customer   Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  user       User       @relation(fields: [userId], references: [id])
+  saleItems  SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id                String  @id @default(cuid())
+  quantity          Int
+  unitPrice         Float
+  totalPrice        Float
+  
+  // FBR Integration Fields
+  hsCode            String?
+  productDescription String
+  rate              String?  // Tax rate as string
+  uom               String?  // Unit of Measure
+  totalValues       Float
+  valueSalesExcludingST Float
+  salesTaxApplicable Boolean @default(true)
+  salesTaxWithheldAtSource Float @default(0)
+  extraTax          Float   @default(0)
+  furtherTax        Float   @default(0)
+  sroScheduleNo     String?
+  fedPayable        Float   @default(0)
+  discount          Float   @default(0)
+  saleType          String?
+  sroItemSerialNo   String?
+
+  saleId            String
+  productId         String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  sale    Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@map("sale_items")
+}
+
+model FBRReferenceData {
+  id          String   @id @default(cuid())
+  type        String   // provinces, doctypecode, itemdesccode, etc.
+  data        Json     // Cached reference data
+  lastUpdated DateTime @default(now())
+  expiresAt   DateTime
+
+  @@unique([type])
+  @@map("fbr_reference_data")
+}
+
+model FBRLog {
+  id          String   @id @default(cuid())
+  clientId    String
+  endpoint    String
+  requestData Json?
+  responseData Json?
+  statusCode  Int
+  success     Boolean
+  error       String?
+  createdAt   DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("fbr_logs")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  MANAGER
+  CASHIER
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  MOBILE_WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum FBRStatus {
+  PENDING
+  VALIDATED
+  SUBMITTED
+  APPROVED
+  REJECTED
+  ERROR
+}

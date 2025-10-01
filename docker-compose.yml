@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: fbr-pos-postgres
+    environment:
+      POSTGRES_DB: fbr_pos_db
+      POSTGRES_USER: fbr_pos_user
+      POSTGRES_PASSWORD: fbr_pos_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fbr-pos-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: fbr-pos-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fbr-pos-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: fbr-pos-server
+    environment:
+      DATABASE_URL: postgresql://fbr_pos_user:fbr_pos_password@postgres:5432/fbr_pos_db?schema=public
+      JWT_SECRET: fbr-pos-super-secret-jwt-key-2024
+      JWT_EXPIRES_IN: 7d
+      PORT: 3001
+      NODE_ENV: production
+      FBR_BASE_URL: https://gw.fbr.gov.pk/di_data/v1/di
+      ENCRYPTION_KEY: fbr-pos-32-char-encryption-key
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      LOG_LEVEL: info
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./server/logs:/app/logs
+    networks:
+      - fbr-pos-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: fbr-pos-client
+    environment:
+      VITE_API_URL: http://localhost:3001/api
+      VITE_APP_NAME: FBR POS System
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+    networks:
+      - fbr-pos-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  fbr-pos-network:
+    driver: bridge

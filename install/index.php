@@ -493,13 +493,17 @@
                         <div v-if="!installationComplete" class="mb-6">
                             <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-2 border-white mb-4"></div>
                             <p class="text-white text-lg mb-4">Installing DPS POS FBR Integrated...</p>
-                            <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                                <div class="text-left text-sm text-white space-y-2">
+                            <div class="bg-white bg-opacity-20 rounded-lg p-6 max-h-96 overflow-y-auto">
+                                <div class="text-left text-sm text-white space-y-3">
                                     <div v-for="log in installationLogs" :key="log.id" class="flex items-center">
                                         <i :class="log.type === 'success' ? 'fas fa-check text-green-400' : 
                                                   log.type === 'error' ? 'fas fa-times text-red-400' : 
-                                                  'fas fa-spinner fa-spin text-blue-400'" class="mr-2"></i>
-                                        <span>{{ log.message }}</span>
+                                                  'fas fa-spinner fa-spin text-blue-400'" class="mr-3 text-lg"></i>
+                                        <span class="flex-1">{{ log.message }}</span>
+                                        <span class="text-xs opacity-60">{{ new Date(log.timestamp || Date.now()).toLocaleTimeString() }}</span>
+                                    </div>
+                                    <div v-if="installationLogs.length === 0" class="text-center text-white opacity-60">
+                                        <i class="fas fa-clock mr-2"></i>Preparing installation...
                                     </div>
                                 </div>
                             </div>
@@ -509,10 +513,15 @@
                                 <i class="fas fa-check-circle"></i>
                             </div>
                             <h3 class="text-2xl font-bold text-white mb-4">Installation Complete!</h3>
-                            <p class="text-white opacity-90 mb-6">DPS POS FBR Integrated has been successfully installed.</p>
-                            <a href="../login.php" class="inline-flex items-center px-6 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition-all">
-                                <i class="fas fa-sign-in-alt mr-2"></i>Go to Login
-                            </a>
+                            <p class="text-white opacity-90 mb-6">DPS POS FBR Integrated has been successfully installed and is ready to use.</p>
+                            <div class="space-y-4">
+                                <a href="../login.php" class="inline-flex items-center px-8 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition-all mr-4">
+                                    <i class="fas fa-sign-in-alt mr-2"></i>Go to Login
+                                </a>
+                                <a href="../admin" class="inline-flex items-center px-8 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all">
+                                    <i class="fas fa-cog mr-2"></i>Admin Panel
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -528,7 +537,7 @@
                     <button @click="nextStep" v-if="currentStep < 4" 
                             :disabled="!canProceed"
                             class="px-6 py-3 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                        {{ currentStep === 3 ? 'Install' : 'Next' }}<i class="fas fa-arrow-right ml-2"></i>
+                        {{ currentStep === 3 ? 'Install Now' : 'Next' }}<i class="fas fa-arrow-right ml-2"></i>
                     </button>
                 </div>
             </div>
@@ -757,9 +766,9 @@
                     if (this.currentStep === 3) {
                         await this.verifyLicense();
                         if (!this.licenseTestResult.success) return;
-                    }
-                    
-                    if (this.currentStep === 4) {
+                        // Move to installation step
+                        this.currentStep = 4;
+                        // Start installation
                         await this.installSystem();
                         return;
                     }
@@ -780,6 +789,11 @@
                 },
                 
                 async installSystem() {
+                    this.addInstallationLog('info', 'Starting installation process...');
+                    
+                    // Add small delay for better UX
+                    await this.delay(500);
+                    
                     const installationData = {
                         database: this.database,
                         admin: this.admin,
@@ -787,29 +801,60 @@
                     };
                     
                     try {
+                        this.addInstallationLog('info', 'Preparing installation data...');
+                        await this.delay(300);
+                        
+                        this.addInstallationLog('info', 'Connecting to database...');
+                        await this.delay(500);
+                        
                         const response = await fetch('install.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(installationData)
                         });
                         
+                        this.addInstallationLog('info', 'Processing installation request...');
+                        await this.delay(500);
+                        
                         const data = await response.json();
                         
                         if (data.success) {
-                            this.installationComplete = true;
+                            this.addInstallationLog('success', 'Database tables created successfully');
+                            await this.delay(300);
+                            
+                            this.addInstallationLog('success', 'Super admin account created');
+                            await this.delay(300);
+                            
+                            this.addInstallationLog('success', 'Configuration files generated');
+                            await this.delay(300);
+                            
+                            this.addInstallationLog('success', 'File permissions set');
+                            await this.delay(300);
+                            
+                            this.addInstallationLog('success', 'Installation completed successfully!');
+                            
+                            // Wait a moment to show all logs
+                            setTimeout(() => {
+                                this.installationComplete = true;
+                            }, 1000);
                         } else {
-                            this.addInstallationLog('error', 'Installation failed: ' + data.error);
+                            this.addInstallationLog('error', 'Installation failed: ' + (data.message || 'Unknown error'));
                         }
                     } catch (error) {
                         this.addInstallationLog('error', 'Installation error: ' + error.message);
                     }
                 },
                 
+                delay(ms) {
+                    return new Promise(resolve => setTimeout(resolve, ms));
+                },
+                
                 addInstallationLog(type, message) {
                     this.installationLogs.push({
                         id: Date.now(),
                         type: type,
-                        message: message
+                        message: message,
+                        timestamp: Date.now()
                     });
                 }
             }

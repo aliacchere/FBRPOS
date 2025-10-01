@@ -1,277 +1,393 @@
 <?php
-/**
- * DPS POS FBR Integrated - Main Installation Script
- */
-
 header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST');
+header('Access-Control-Allow-Headers: Content-Type');
 
-// Get POST data
-$data = json_decode(file_get_contents('php://input'), true);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+    exit;
+}
 
-if (!$data) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'error' => 'Invalid request data']);
+$input = json_decode(file_get_contents('php://input'), true);
+
+if (!$input) {
+    echo json_encode(['success' => false, 'message' => 'Invalid JSON input']);
+    exit;
+}
+
+$database = $input['database'] ?? [];
+$admin = $input['admin'] ?? [];
+$license = $input['license'] ?? [];
+
+// Validate required fields
+if (empty($database['host']) || empty($database['name']) || empty($database['username'])) {
+    echo json_encode(['success' => false, 'message' => 'Database configuration is incomplete']);
+    exit;
+}
+
+if (empty($admin['name']) || empty($admin['email']) || empty($admin['password'])) {
+    echo json_encode(['success' => false, 'message' => 'Admin configuration is incomplete']);
+    exit;
+}
+
+if (empty($license['key'])) {
+    echo json_encode(['success' => false, 'message' => 'License key is required']);
     exit;
 }
 
 try {
-    // Step 1: Create database configuration
-    createDatabaseConfig($data['database']);
+    // Step 1: Test database connection
+    $dsn = "mysql:host={$database['host']};port={$database['port']};dbname={$database['name']};charset={$database['charset']}";
+    $pdo = new PDO($dsn, $database['username'], $database['password'], [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false
+    ]);
     
-    // Step 2: Run database migrations
-    runDatabaseMigrations($data['database']);
+    // Step 2: Create database tables
+    $tables = createDatabaseTables($pdo);
     
-    // Step 3: Create super admin user
-    createSuperAdmin($data['admin']);
+    // Step 3: Create Super Admin user
+    $adminId = createSuperAdmin($pdo, $admin);
     
-    // Step 4: Seed initial data
-    seedInitialData();
+    // Step 4: Create default tenant
+    $tenantId = createDefaultTenant($pdo, $admin);
     
-    // Step 5: Create application configuration
-    createApplicationConfig($data);
+    // Step 5: Create configuration files
+    createConfigurationFiles($database, $admin, $license);
     
-    // Step 6: Create necessary directories
-    createDirectories();
+    // Step 6: Set up file permissions
+    setupFilePermissions();
     
-    // Step 7: Create .htaccess files
-    createHtaccessFiles();
-    
-    // Step 8: Create installation lock
+    // Step 7: Create installation lock file
     createInstallationLock();
     
     echo json_encode([
         'success' => true,
-        'message' => 'Installation completed successfully!',
-        'admin_email' => $data['admin']['email']
+        'message' => 'Installation completed successfully',
+        'details' => [
+            'admin_id' => $adminId,
+            'tenant_id' => $tenantId,
+            'tables_created' => count($tables),
+            'admin_email' => $admin['email'],
+            'database_name' => $database['name']
+        ]
     ]);
-
+    
 } catch (Exception $e) {
-    error_log("Installation Error: " . $e->getMessage());
-    http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => $e->getMessage()
+        'message' => 'Installation failed: ' . $e->getMessage()
     ]);
 }
 
-function createDatabaseConfig($dbConfig) {
-    $configContent = "<?php\n";
-    $configContent .= "/**\n";
-    $configContent .= " * DPS POS FBR Integrated - Database Configuration\n";
-    $configContent .= " * Generated during installation\n";
-    $configContent .= " */\n\n";
-    $configContent .= "return [\n";
-    $configContent .= "    'default' => 'mysql',\n";
-    $configContent .= "    'connections' => [\n";
-    $configContent .= "        'mysql' => [\n";
-    $configContent .= "            'driver' => 'mysql',\n";
-    $configContent .= "            'host' => '{$dbConfig['host']}',\n";
-    $configContent .= "            'port' => '3306',\n";
-    $configContent .= "            'database' => '{$dbConfig['name']}',\n";
-    $configContent .= "            'username' => '{$dbConfig['username']}',\n";
-    $configContent .= "            'password' => '{$dbConfig['password']}',\n";
-    $configContent .= "            'charset' => 'utf8mb4',\n";
-    $configContent .= "            'collation' => 'utf8mb4_unicode_ci',\n";
-    $configContent .= "            'prefix' => '',\n";
-    $configContent .= "            'strict' => true,\n";
-    $configContent .= "            'engine' => null,\n";
-    $configContent .= "        ],\n";
-    $configContent .= "    ],\n";
-    $configContent .= "];\n";
+function createDatabaseTables($pdo) {
+    $tables = [];
     
-    $configDir = dirname(__DIR__) . '/config';
-    if (!is_dir($configDir)) {
-        mkdir($configDir, 0755, true);
-    }
+    // Users table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS users (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            phone VARCHAR(20) NULL,
+            role ENUM('super_admin', 'tenant_admin', 'cashier', 'manager') NOT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            email_verified_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_email (email),
+            INDEX idx_role (role)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'users';
     
-    file_put_contents($configDir . '/database.php', $configContent);
+    // Tenants table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS tenants (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            domain VARCHAR(255) UNIQUE NULL,
+            database_name VARCHAR(255) NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            subscription_plan VARCHAR(50) DEFAULT 'basic',
+            subscription_expires_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_domain (domain),
+            INDEX idx_is_active (is_active)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'tenants';
+    
+    // Products table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS products (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            sku VARCHAR(100) UNIQUE NOT NULL,
+            barcode VARCHAR(100) NULL,
+            description TEXT NULL,
+            price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            cost DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            stock_quantity INT NOT NULL DEFAULT 0,
+            min_stock_level INT NOT NULL DEFAULT 0,
+            category_id BIGINT UNSIGNED NULL,
+            supplier_id BIGINT UNSIGNED NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_sku (sku),
+            INDEX idx_barcode (barcode),
+            INDEX idx_category_id (category_id),
+            INDEX idx_supplier_id (supplier_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'products';
+    
+    // Sales table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS sales (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            invoice_number VARCHAR(50) UNIQUE NOT NULL,
+            fbr_invoice_number VARCHAR(50) NULL,
+            customer_id BIGINT UNSIGNED NULL,
+            cashier_id BIGINT UNSIGNED NOT NULL,
+            subtotal DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            tax_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            discount_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            payment_method ENUM('cash', 'card', 'bank_transfer', 'mobile_payment') NOT NULL,
+            payment_reference VARCHAR(100) NULL,
+            status ENUM('draft', 'completed', 'cancelled', 'refunded') DEFAULT 'draft',
+            fbr_status ENUM('pending', 'validated', 'posted', 'failed') DEFAULT 'pending',
+            fbr_error_message TEXT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_invoice_number (invoice_number),
+            INDEX idx_fbr_invoice_number (fbr_invoice_number),
+            INDEX idx_customer_id (customer_id),
+            INDEX idx_cashier_id (cashier_id),
+            INDEX idx_status (status),
+            INDEX idx_fbr_status (fbr_status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'sales';
+    
+    // Sale Items table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS sale_items (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            sale_id BIGINT UNSIGNED NOT NULL,
+            product_id BIGINT UNSIGNED NOT NULL,
+            quantity INT NOT NULL DEFAULT 1,
+            unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            total_price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            tax_rate DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+            tax_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_sale_id (sale_id),
+            INDEX idx_product_id (product_id),
+            FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'sale_items';
+    
+    // FBR Integration Settings table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS fbr_integration_settings (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            bearer_token TEXT NOT NULL,
+            environment ENUM('sandbox', 'production') DEFAULT 'sandbox',
+            is_active BOOLEAN DEFAULT TRUE,
+            last_sync_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            UNIQUE KEY unique_tenant (tenant_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'fbr_integration_settings';
+    
+    // System Settings table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS system_settings (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NULL,
+            setting_key VARCHAR(100) NOT NULL,
+            setting_value TEXT NULL,
+            setting_type ENUM('string', 'number', 'boolean', 'json') DEFAULT 'string',
+            is_public BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_setting_key (setting_key),
+            UNIQUE KEY unique_tenant_setting (tenant_id, setting_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'system_settings';
+    
+    return $tables;
 }
 
-function runDatabaseMigrations($dbConfig) {
-    $dsn = "mysql:host={$dbConfig['host']};dbname={$dbConfig['name']};charset=utf8mb4";
-    $pdo = new PDO($dsn, $dbConfig['username'], $dbConfig['password'], [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
-    
-    // Read and execute database schema
-    $schemaFile = __DIR__ . '/database_schema.sql';
-    if (!file_exists($schemaFile)) {
-        throw new Exception('Database schema file not found');
-    }
-    
-    $sql = file_get_contents($schemaFile);
-    $statements = explode(';', $sql);
-    
-    foreach ($statements as $statement) {
-        $statement = trim($statement);
-        if (!empty($statement)) {
-            $pdo->exec($statement);
-        }
-    }
-}
-
-function createSuperAdmin($adminData) {
-    $dsn = "mysql:host=localhost;dbname=dpspos_fbr;charset=utf8mb4";
-    $pdo = new PDO($dsn, 'root', '', [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
-    
-    $password = password_hash($adminData['password'], PASSWORD_DEFAULT);
+function createSuperAdmin($pdo, $admin) {
+    $hashedPassword = password_hash($admin['password'], PASSWORD_DEFAULT);
     
     $stmt = $pdo->prepare("
-        INSERT INTO users (name, email, password, role, is_active, email_verified_at, created_at, updated_at) 
-        VALUES (?, ?, ?, 'super_admin', 1, NOW(), NOW(), NOW())
+        INSERT INTO users (tenant_id, name, email, password, phone, role, is_active, email_verified_at) 
+        VALUES (1, ?, ?, ?, ?, 'super_admin', TRUE, NOW())
     ");
     
     $stmt->execute([
-        $adminData['name'],
-        $adminData['email'],
-        $password
-    ]);
-}
-
-function seedInitialData() {
-    $dsn = "mysql:host=localhost;dbname=dpspos_fbr;charset=utf8mb4";
-    $pdo = new PDO($dsn, 'root', '', [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
+        $admin['name'],
+        $admin['email'],
+        $hashedPassword,
+        $admin['phone'] ?? null
     ]);
     
-    // Insert default provinces
-    $provinces = [
-        ['name' => 'Punjab', 'code' => 'PUN'],
-        ['name' => 'Sindh', 'code' => 'SIN'],
-        ['name' => 'Khyber Pakhtunkhwa', 'code' => 'KPK'],
-        ['name' => 'Balochistan', 'code' => 'BAL'],
-        ['name' => 'Islamabad Capital Territory', 'code' => 'ICT'],
-        ['name' => 'Azad Jammu and Kashmir', 'code' => 'AJK'],
-        ['name' => 'Gilgit-Baltistan', 'code' => 'GB']
-    ];
-    
-    foreach ($provinces as $province) {
-        $stmt = $pdo->prepare("INSERT INTO provinces (name, code, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
-        $stmt->execute([$province['name'], $province['code']]);
-    }
-    
-    // Insert default units of measure
-    $uom = [
-        ['name' => 'Numbers, pieces, units', 'code' => 'PCE'],
-        ['name' => 'Kilograms', 'code' => 'KGM'],
-        ['name' => 'Grams', 'code' => 'GRM'],
-        ['name' => 'Liters', 'code' => 'LTR'],
-        ['name' => 'Meters', 'code' => 'MTR'],
-        ['name' => 'Square meters', 'code' => 'MTK'],
-        ['name' => 'Cubic meters', 'code' => 'MTQ'],
-        ['name' => 'Dozen', 'code' => 'DZN'],
-        ['name' => 'Gross', 'code' => 'GRO'],
-        ['name' => 'Box', 'code' => 'BX']
-    ];
-    
-    foreach ($uom as $unit) {
-        $stmt = $pdo->prepare("INSERT INTO units_of_measure (name, code, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
-        $stmt->execute([$unit['name'], $unit['code']]);
-    }
-    
-    // Insert default HS codes
-    $hsCodes = [
-        ['code' => '0101.2100', 'description' => 'Live horses, asses, mules and hinnies'],
-        ['code' => '0102.2100', 'description' => 'Live bovine animals'],
-        ['code' => '0103.2100', 'description' => 'Live swine'],
-        ['code' => '0104.2100', 'description' => 'Live sheep and goats'],
-        ['code' => '0105.2100', 'description' => 'Live poultry'],
-        ['code' => '0201.2100', 'description' => 'Meat of bovine animals, fresh or chilled'],
-        ['code' => '0202.2100', 'description' => 'Meat of bovine animals, frozen'],
-        ['code' => '0203.2100', 'description' => 'Meat of swine, fresh, chilled or frozen'],
-        ['code' => '0204.2100', 'description' => 'Meat of sheep or goats, fresh, chilled or frozen'],
-        ['code' => '0205.2100', 'description' => 'Meat of horses, asses, mules or hinnies, fresh, chilled or frozen']
-    ];
-    
-    foreach ($hsCodes as $hsCode) {
-        $stmt = $pdo->prepare("INSERT INTO hs_codes (code, description, created_at, updated_at) VALUES (?, ?, NOW(), NOW())");
-        $stmt->execute([$hsCode['code'], $hsCode['description']]);
-    }
+    return $pdo->lastInsertId();
 }
 
-function createApplicationConfig($data) {
-    $appConfig = "<?php\n";
-    $appConfig .= "return [\n";
-    $appConfig .= "    'name' => 'DPS POS FBR Integrated',\n";
-    $appConfig .= "    'env' => 'production',\n";
-    $appConfig .= "    'debug' => false,\n";
-    $appConfig .= "    'url' => '" . ($_SERVER['HTTP_HOST'] ?? 'localhost') . "',\n";
-    $appConfig .= "    'timezone' => 'Asia/Karachi',\n";
-    $appConfig .= "    'locale' => 'en',\n";
-    $appConfig .= "    'fallback_locale' => 'en',\n";
-    $appConfig .= "    'key' => '" . bin2hex(random_bytes(32)) . "',\n";
-    $appConfig .= "    'cipher' => 'AES-256-CBC',\n";
-    $appConfig .= "    'providers' => [\n";
-    $appConfig .= "        // Service providers\n";
-    $appConfig .= "    ],\n";
-    $appConfig .= "    'aliases' => [\n";
-    $appConfig .= "        // Class aliases\n";
-    $appConfig .= "    ],\n";
-    $appConfig .= "];\n";
+function createDefaultTenant($pdo, $admin) {
+    $stmt = $pdo->prepare("
+        INSERT INTO tenants (name, domain, is_active, subscription_plan) 
+        VALUES (?, ?, TRUE, 'unlimited')
+    ");
     
-    $configDir = dirname(__DIR__) . '/config';
-    file_put_contents($configDir . '/app.php', $appConfig);
+    $companyName = $admin['company'] ?? 'Default Company';
+    $stmt->execute([$companyName, null]);
+    
+    $tenantId = $pdo->lastInsertId();
+    
+    // Update the super admin to belong to this tenant
+    $stmt = $pdo->prepare("UPDATE users SET tenant_id = ? WHERE role = 'super_admin'");
+    $stmt->execute([$tenantId]);
+    
+    return $tenantId;
 }
 
-function createDirectories() {
+function createConfigurationFiles($database, $admin, $license) {
+    // Create .env file
+    $envContent = "APP_NAME=\"DPS POS FBR Integrated\"
+APP_ENV=production
+APP_KEY=" . base64_encode(random_bytes(32)) . "
+APP_DEBUG=false
+APP_URL=http://localhost
+
+DB_CONNECTION=mysql
+DB_HOST={$database['host']}
+DB_PORT={$database['port']}
+DB_DATABASE={$database['name']}
+DB_USERNAME={$database['username']}
+DB_PASSWORD={$database['password']}
+
+CACHE_DRIVER=file
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS=null
+MAIL_FROM_NAME=\"\${APP_NAME}\"
+
+FBR_LICENSE_KEY={$license['key']}
+FBR_SANDBOX_URL=https://gw.fbr.gov.pk/pdi/v1
+FBR_PRODUCTION_URL=https://gw.fbr.gov.pk/pdi/v1
+";
+    
+    file_put_contents('../.env', $envContent);
+    
+    // Create config/database.php
+    $dbConfig = "<?php
+return [
+    'default' => env('DB_CONNECTION', 'mysql'),
+    'connections' => [
+        'mysql' => [
+            'driver' => 'mysql',
+            'url' => env('DATABASE_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE', 'forge'),
+            'username' => env('DB_USERNAME', 'forge'),
+            'password' => env('DB_PASSWORD', ''),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+    ],
+];
+";
+    
+    if (!is_dir('../config')) {
+        mkdir('../config', 0755, true);
+    }
+    file_put_contents('../config/database.php', $dbConfig);
+}
+
+function setupFilePermissions() {
     $directories = [
-        'storage/app',
-        'storage/framework/cache',
-        'storage/framework/sessions',
-        'storage/framework/views',
-        'storage/logs',
-        'public/uploads',
-        'public/uploads/products',
-        'public/uploads/customers',
-        'public/uploads/suppliers',
-        'public/uploads/employees',
-        'public/uploads/receipts',
-        'public/uploads/backups'
+        '../storage',
+        '../storage/app',
+        '../storage/framework',
+        '../storage/framework/cache',
+        '../storage/framework/sessions',
+        '../storage/framework/views',
+        '../storage/logs',
+        '../bootstrap/cache',
+        '../public/uploads',
+        '../public/storage'
     ];
     
     foreach ($directories as $dir) {
-        $fullPath = dirname(__DIR__) . '/' . $dir;
-        if (!is_dir($fullPath)) {
-            mkdir($fullPath, 0755, true);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
         }
+        chmod($dir, 0755);
     }
 }
 
-function createHtaccessFiles() {
-    // Main .htaccess
-    $htaccess = "RewriteEngine On\n";
-    $htaccess .= "RewriteCond %{REQUEST_FILENAME} !-f\n";
-    $htaccess .= "RewriteCond %{REQUEST_FILENAME} !-d\n";
-    $htaccess .= "RewriteRule ^(.*)$ public/index.php [QSA,L]\n";
-    
-    file_put_contents(dirname(__DIR__) . '/.htaccess', $htaccess);
-    
-    // Public .htaccess
-    $publicHtaccess = "Options -Indexes\n";
-    $publicHtaccess .= "RewriteEngine On\n";
-    $publicHtaccess .= "RewriteCond %{REQUEST_FILENAME} !-f\n";
-    $publicHtaccess .= "RewriteCond %{REQUEST_FILENAME} !-d\n";
-    $publicHtaccess .= "RewriteRule ^(.*)$ index.php [QSA,L]\n";
-    
-    file_put_contents(dirname(__DIR__) . '/public/.htaccess', $publicHtaccess);
-}
-
 function createInstallationLock() {
-    $lockContent = "<?php\n";
-    $lockContent .= "// DPS POS FBR Integrated - Installation Lock\n";
-    $lockContent .= "// This file prevents re-installation\n";
-    $lockContent .= "// Delete this file to re-run installation\n";
-    $lockContent .= "define('INSTALLATION_LOCK', true);\n";
-    $lockContent .= "define('INSTALLATION_DATE', '" . date('Y-m-d H:i:s') . "');\n";
+    $lockContent = "<?php
+// DPS POS FBR Integrated Installation Lock
+// This file prevents accidental re-installation
+// Delete this file to allow re-installation
+
+return [
+    'installed' => true,
+    'installed_at' => '" . date('Y-m-d H:i:s') . "',
+    'version' => '1.0.0'
+];
+";
     
-    file_put_contents(dirname(__DIR__) . '/config/install.lock', $lockContent);
+    file_put_contents('../storage/installed.lock', $lockContent);
 }
 ?>

@@ -1,64 +1,82 @@
 <?php
-/**
- * DPS POS FBR Integrated - Application Configuration
- */
 
-// Application Settings
-define('APP_NAME', 'DPS POS FBR Integrated');
-define('APP_VERSION', '1.0.0');
-define('APP_URL', 'http://localhost/dpspos'); // Change this to your domain
-define('APP_TIMEZONE', 'Asia/Karachi');
-
-// FBR API Configuration
-define('FBR_SANDBOX_BASE_URL', 'https://gw.fbr.gov.pk/di_data/v1/di');
-define('FBR_PRODUCTION_BASE_URL', 'https://gw.fbr.gov.pk/di_data/v1/di');
-define('FBR_REFERENCE_BASE_URL', 'https://gw.fbr.gov.pk/pdi/v1');
-
-// FBR API Endpoints
-define('FBR_VALIDATE_ENDPOINT_SB', '/validateinvoicedata_sb');
-define('FBR_POST_ENDPOINT_SB', '/postinvoicedata_sb');
-define('FBR_VALIDATE_ENDPOINT_PROD', '/validateinvoicedata');
-define('FBR_POST_ENDPOINT_PROD', '/postinvoicedata');
-
-// Reference API Endpoints
-define('FBR_PROVINCES_ENDPOINT', '/provinces');
-define('FBR_DOC_TYPES_ENDPOINT', '/doctypecode');
-define('FBR_HS_CODES_ENDPOINT', '/itemdesccode');
-define('FBR_UOM_ENDPOINT', '/uom');
-define('FBR_TRANS_TYPES_ENDPOINT', '/transtypecode');
-
-// Currency and Locale
-define('CURRENCY_SYMBOL', 'Rs.');
-define('CURRENCY_CODE', 'PKR');
-define('DATE_FORMAT', 'Y-m-d');
-define('DATETIME_FORMAT', 'Y-m-d H:i:s');
-define('DISPLAY_DATE_FORMAT', 'd/m/Y');
-define('DISPLAY_DATETIME_FORMAT', 'd/m/Y H:i:s');
-
-// File Upload Settings
-define('UPLOAD_PATH', 'uploads/');
-define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5MB
-define('ALLOWED_IMAGE_TYPES', ['jpg', 'jpeg', 'png', 'gif']);
-
-// Pagination
-define('RECORDS_PER_PAGE', 20);
-
-// Security
-define('ENCRYPTION_KEY', 'your-32-character-secret-key-here'); // Change this!
-define('SESSION_TIMEOUT', 3600); // 1 hour
-
-// WhatsApp Integration
-define('WHATSAPP_API_URL', 'https://api.whatsapp.com/send');
-define('WHATSAPP_BUSINESS_NUMBER', ''); // Set your WhatsApp Business number
-
-// QR Code Settings
-define('QR_CODE_SIZE', 200);
-define('QR_CODE_MARGIN', 10);
-
-// Error Reporting (disable in production)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Set timezone
-date_default_timezone_set(APP_TIMEZONE);
-?>
+return [
+    'name' => env('APP_NAME', 'DPS POS FBR Integrated'),
+    'env' => env('APP_ENV', 'production'),
+    'debug' => (bool) env('APP_DEBUG', false),
+    'url' => env('APP_URL', 'http://localhost'),
+    'asset_url' => env('ASSET_URL', null),
+    'timezone' => 'Asia/Karachi',
+    'locale' => 'en',
+    'fallback_locale' => 'en',
+    'faker_locale' => 'en_US',
+    'key' => env('APP_KEY'),
+    'cipher' => 'AES-256-CBC',
+    
+    'providers' => [
+        Illuminate\Auth\AuthServiceProvider::class,
+        Illuminate\Broadcasting\BroadcastServiceProvider::class,
+        Illuminate\Bus\BusServiceProvider::class,
+        Illuminate\Cache\CacheServiceProvider::class,
+        Illuminate\Foundation\Providers\ConsoleSupportServiceProvider::class,
+        Illuminate\Cookie\CookieServiceProvider::class,
+        Illuminate\Database\DatabaseServiceProvider::class,
+        Illuminate\Encryption\EncryptionServiceProvider::class,
+        Illuminate\Filesystem\FilesystemServiceProvider::class,
+        Illuminate\Foundation\Providers\FoundationServiceProvider::class,
+        Illuminate\Hashing\HashServiceProvider::class,
+        Illuminate\Mail\MailServiceProvider::class,
+        Illuminate\Notifications\NotificationServiceProvider::class,
+        Illuminate\Pagination\PaginationServiceProvider::class,
+        Illuminate\Pipeline\PipelineServiceProvider::class,
+        Illuminate\Queue\QueueServiceProvider::class,
+        Illuminate\Redis\RedisServiceProvider::class,
+        Illuminate\Auth\Passwords\PasswordResetServiceProvider::class,
+        Illuminate\Session\SessionServiceProvider::class,
+        Illuminate\Translation\TranslationServiceProvider::class,
+        Illuminate\Validation\ValidationServiceProvider::class,
+        Illuminate\View\ViewServiceProvider::class,
+        App\Providers\AppServiceProvider::class,
+        App\Providers\AuthServiceProvider::class,
+        App\Providers\EventServiceProvider::class,
+        App\Providers\RouteServiceProvider::class,
+    ],
+    
+    'aliases' => [
+        'App' => Illuminate\Support\Facades\App::class,
+        'Arr' => Illuminate\Support\Arr::class,
+        'Artisan' => Illuminate\Support\Facades\Artisan::class,
+        'Auth' => Illuminate\Support\Facades\Auth::class,
+        'Blade' => Illuminate\Support\Facades\Blade::class,
+        'Broadcast' => Illuminate\Support\Facades\Broadcast::class,
+        'Bus' => Illuminate\Support\Facades\Bus::class,
+        'Cache' => Illuminate\Support\Facades\Cache::class,
+        'Config' => Illuminate\Support\Facades\Config::class,
+        'Cookie' => Illuminate\Support\Facades\Cookie::class,
+        'Crypt' => Illuminate\Support\Facades\Crypt::class,
+        'DB' => Illuminate\Support\Facades\DB::class,
+        'Eloquent' => Illuminate\Database\Eloquent\Model::class,
+        'Event' => Illuminate\Support\Facades\Event::class,
+        'File' => Illuminate\Support\Facades\File::class,
+        'Gate' => Illuminate\Support\Facades\Gate::class,
+        'Hash' => Illuminate\Support\Facades\Hash::class,
+        'Http' => Illuminate\Support\Facades\Http::class,
+        'Lang' => Illuminate\Support\Facades\Lang::class,
+        'Log' => Illuminate\Support\Facades\Log::class,
+        'Mail' => Illuminate\Support\Facades\Mail::class,
+        'Notification' => Illuminate\Support\Facades\Notification::class,
+        'Password' => Illuminate\Support\Facades\Password::class,
+        'Queue' => Illuminate\Support\Facades\Queue::class,
+        'Redirect' => Illuminate\Support\Facades\Redirect::class,
+        'Request' => Illuminate\Support\Facades\Request::class,
+        'Response' => Illuminate\Support\Facades\Response::class,
+        'Route' => Illuminate\Support\Facades\Route::class,
+        'Schema' => Illuminate\Support\Facades\Schema::class,
+        'Session' => Illuminate\Support\Facades\Session::class,
+        'Storage' => Illuminate\Support\Facades\Storage::class,
+        'Str' => Illuminate\Support\Str::class,
+        'URL' => Illuminate\Support\Facades\URL::class,
+        'Validator' => Illuminate\Support\Facades\Validator::class,
+        'View' => Illuminate\Support\Facades\View::class,
+    ],
+];

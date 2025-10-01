@@ -130,10 +130,22 @@ if (isset($_GET['logout'])) {
                 </button>
             </div>
             
-            <!-- Users -->
+            <!-- Customers -->
             <div class="glass-effect rounded-lg p-6 text-center card-hover">
                 <div class="text-4xl text-white mb-4">
                     <i class="fas fa-users"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">Customers</h3>
+                <p class="text-white opacity-75 text-sm mb-4">Manage customers and profiles</p>
+                <button onclick="openCustomers()" class="bg-white text-indigo-600 px-6 py-2 rounded-lg hover:bg-gray-100 transition-all">
+                    <i class="fas fa-arrow-right mr-2"></i>Manage Customers
+                </button>
+            </div>
+            
+            <!-- Users -->
+            <div class="glass-effect rounded-lg p-6 text-center card-hover">
+                <div class="text-4xl text-white mb-4">
+                    <i class="fas fa-user-cog"></i>
                 </div>
                 <h3 class="text-xl font-semibold text-white mb-2">Users</h3>
                 <p class="text-white opacity-75 text-sm mb-4">Manage users and permissions</p>
@@ -186,7 +198,7 @@ if (isset($_GET['logout'])) {
         }
         
         function openInventory() {
-            alert('Inventory Management will be available in the next update!');
+            window.location.href = '/inventory/';
         }
         
         function openFBR() {
@@ -194,11 +206,15 @@ if (isset($_GET['logout'])) {
         }
         
         function openReports() {
-            alert('Reports module will be available in the next update!');
+            window.location.href = '/reports/';
         }
         
         function openSettings() {
             alert('Settings panel will be available in the next update!');
+        }
+        
+        function openCustomers() {
+            window.location.href = '/customers/';
         }
         
         function openUsers() {

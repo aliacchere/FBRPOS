@@ -240,7 +240,144 @@ function createDatabaseTables($pdo) {
     ");
     $tables[] = 'system_settings';
     
+    // Categories table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS categories (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_name (name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'categories';
+    
+    // Suppliers table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS suppliers (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NULL,
+            phone VARCHAR(20) NULL,
+            address TEXT NULL,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_name (name),
+            INDEX idx_email (email)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'suppliers';
+    
+    // Customers table
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS customers (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            tenant_id BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NULL,
+            phone VARCHAR(20) NULL,
+            address TEXT NULL,
+            credit_limit DECIMAL(10,2) DEFAULT 0.00,
+            credit_used DECIMAL(10,2) DEFAULT 0.00,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_tenant_id (tenant_id),
+            INDEX idx_name (name),
+            INDEX idx_email (email),
+            INDEX idx_phone (phone)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+    $tables[] = 'customers';
+    
+    // Update products table to include additional fields
+    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS category_id BIGINT UNSIGNED NULL");
+    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS supplier_id BIGINT UNSIGNED NULL");
+    $pdo->exec("ALTER TABLE products ADD COLUMN IF NOT EXISTS description TEXT NULL");
+    
+    // Add foreign key constraints
+    $pdo->exec("ALTER TABLE products ADD CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL");
+    $pdo->exec("ALTER TABLE products ADD CONSTRAINT fk_products_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL");
+    
+    // Insert sample data
+    insertSampleData($pdo, $tenantId);
+    
     return $tables;
+}
+
+function insertSampleData($pdo, $tenantId) {
+    // Insert sample categories
+    $categories = [
+        ['Electronics', 'Electronic devices and accessories'],
+        ['Clothing', 'Apparel and fashion items'],
+        ['Food & Beverages', 'Food and drink products'],
+        ['Books', 'Books and educational materials'],
+        ['Home & Garden', 'Home improvement and garden supplies']
+    ];
+    
+    foreach ($categories as $category) {
+        $stmt = $pdo->prepare("INSERT INTO categories (tenant_id, name, description, created_at) VALUES (?, ?, ?, NOW())");
+        $stmt->execute([$tenantId, $category[0], $category[1]]);
+    }
+    
+    // Insert sample suppliers
+    $suppliers = [
+        ['ABC Electronics Ltd', 'contact@abcelectronics.com', '+92-300-1234567', 'Karachi, Pakistan'],
+        ['Fashion World', 'info@fashionworld.com', '+92-300-2345678', 'Lahore, Pakistan'],
+        ['Food Distributors', 'sales@fooddist.com', '+92-300-3456789', 'Islamabad, Pakistan'],
+        ['Book Publishers', 'orders@bookpub.com', '+92-300-4567890', 'Rawalpindi, Pakistan']
+    ];
+    
+    foreach ($suppliers as $supplier) {
+        $stmt = $pdo->prepare("INSERT INTO suppliers (tenant_id, name, email, phone, address, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$tenantId, $supplier[0], $supplier[1], $supplier[2], $supplier[3]]);
+    }
+    
+    // Insert sample customers
+    $customers = [
+        ['Walk-in Customer', NULL, NULL, NULL, 0.00],
+        ['John Doe', 'john@example.com', '+92-300-1111111', 'Karachi, Pakistan', 50000.00],
+        ['Jane Smith', 'jane@example.com', '+92-300-2222222', 'Lahore, Pakistan', 30000.00],
+        ['Ahmed Ali', 'ahmed@example.com', '+92-300-3333333', 'Islamabad, Pakistan', 25000.00]
+    ];
+    
+    foreach ($customers as $customer) {
+        $stmt = $pdo->prepare("INSERT INTO customers (tenant_id, name, email, phone, address, credit_limit, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$tenantId, $customer[0], $customer[1], $customer[2], $customer[3], $customer[4]]);
+    }
+    
+    // Get category and supplier IDs
+    $stmt = $pdo->prepare("SELECT id FROM categories WHERE tenant_id = ? ORDER BY id");
+    $stmt->execute([$tenantId]);
+    $categoryIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    $stmt = $pdo->prepare("SELECT id FROM suppliers WHERE tenant_id = ? ORDER BY id");
+    $stmt->execute([$tenantId]);
+    $supplierIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Insert sample products
+    $products = [
+        ['Samsung Galaxy S21', 'SAMS21', '1234567890123', 150000.00, 120000.00, 10, 2, $categoryIds[0], $supplierIds[0], 'Latest Samsung smartphone'],
+        ['iPhone 13', 'IPH13', '1234567890124', 180000.00, 150000.00, 8, 2, $categoryIds[0], $supplierIds[0], 'Apple iPhone 13'],
+        ['Dell Laptop', 'DELL001', '1234567890125', 80000.00, 65000.00, 5, 1, $categoryIds[0], $supplierIds[0], 'Dell Inspiron laptop'],
+        ['Nike T-Shirt', 'NIKE001', '1234567890126', 2500.00, 1500.00, 50, 10, $categoryIds[1], $supplierIds[1], 'Cotton t-shirt'],
+        ['Adidas Shoes', 'ADIDAS001', '1234567890127', 8000.00, 5000.00, 25, 5, $categoryIds[1], $supplierIds[1], 'Running shoes'],
+        ['Coca Cola', 'COKE001', '1234567890128', 50.00, 30.00, 200, 50, $categoryIds[2], $supplierIds[2], 'Soft drink'],
+        ['Programming Book', 'BOOK001', '1234567890129', 1500.00, 800.00, 30, 5, $categoryIds[3], $supplierIds[3], 'Learn programming'],
+        ['Garden Tools Set', 'GARDEN001', '1234567890130', 5000.00, 3000.00, 15, 3, $categoryIds[4], $supplierIds[0], 'Complete garden tools set']
+    ];
+    
+    foreach ($products as $product) {
+        $stmt = $pdo->prepare("INSERT INTO products (tenant_id, name, sku, barcode, price, cost, stock_quantity, min_stock_level, category_id, supplier_id, description, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$tenantId, $product[0], $product[1], $product[2], $product[3], $product[4], $product[5], $product[6], $product[7], $product[8], $product[9]]);
+    }
 }
 
 function createSuperAdmin($pdo, $admin) {

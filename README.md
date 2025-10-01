@@ -1,347 +1,252 @@
-# FBR POS System - Advanced Web-Based Point of Sale with FBR Digital Invoicing Integration
+# DPS POS FBR Integrated - Premium PHP SaaS Script
 
-A comprehensive, modern Point of Sale (POS) system specifically designed for businesses in Pakistan with seamless integration to the Federal Board of Revenue (FBR) Digital Invoicing API. This system enables businesses to manage sales, inventory, customers, and ensure full compliance with Pakistan's tax regulations.
+## 🚀 Overview
 
-## 🚀 Features
+**DPS POS FBR Integrated** is a comprehensive, multi-tenant PHP SaaS script designed specifically for the Pakistani market. It combines an advanced Point of Sale (POS) system with full FBR Digital Invoicing (DI) integration, making it the ultimate "business-in-a-box" solution for entrepreneurs.
 
-### Core FBR Integration
-- **FBR Digital Invoicing API Integration**: Complete integration with Pakistan's FBR DI API
-- **Multi-tenant Architecture**: Each business can configure their own FBR API credentials
-- **Invoice Validation & Submission**: Pre-validation and submission of invoices to FBR
-- **Reference Data Integration**: Automatic population of provinces, HS codes, UOMs, and tax rates
-- **QR Code Generation**: FBR-compliant QR codes for printed invoices
-- **Compliance Reporting**: Detailed FBR submission logs and compliance tracking
+## ✨ Key Features
 
-### Standard POS Features
-- **User Management**: Role-based access control (Admin, Manager, Cashier)
-- **Product Management**: Complete inventory with FBR HS codes and tax rates
-- **Customer Management**: Customer database with FBR province integration
-- **Sales Processing**: Intuitive sales interface with real-time calculations
-- **Payment Processing**: Multiple payment methods (Cash, Card, Bank Transfer, Mobile Wallet)
-- **Hold/Resume Sales**: Ability to hold and resume incomplete sales
-- **Returns & Refunds**: Process returns with automatic credit note generation
-- **Reporting**: Comprehensive sales, tax, and FBR compliance reports
+### 🎯 Core Features
+- **Multi-tenant SaaS Architecture** - Single database with strict tenant isolation
+- **FBR Digital Invoicing Integration** - Full compliance with Pakistani tax regulations
+- **Advanced POS System** - Blazing fast, intuitive single-page application
+- **Inventory Management** - Complete stock control and purchase order system
+- **HRM & Payroll** - Employee management with tax deduction certificates
+- **Advanced Reporting** - Comprehensive analytics with multi-format exports
+- **Template Editor** - Customizable invoice and receipt templates
+- **Data Management** - Bulk import/export with validation
 
-### Modern UI/UX
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Modern Interface**: Clean, intuitive design with subtle 3D effects
-- **Real-time Updates**: Live dashboard with real-time data
-- **Accessibility**: WCAG compliant design
-- **Dark/Light Mode**: Theme switching capability
+### 🔧 Technical Features
+- **Easy Web Installer** - Graphical step-by-step installation process
+- **Security Headers** - Enterprise-grade security middleware
+- **Performance Optimization** - Caching and query optimization
+- **Offline Resilience** - Queue system for FBR API failures
+- **Multi-format Exports** - PDF, CSV, Excel support
+- **Backup & Restore** - One-click system backup functionality
 
 ## 🛠 Technology Stack
 
-### Backend
-- **Node.js** with **Express.js** and **TypeScript**
-- **PostgreSQL** database with **Prisma ORM**
-- **JWT** authentication with **bcrypt** password hashing
-- **Axios** for FBR API integration
-- **Winston** for logging
-- **Rate limiting** and security middleware
+- **Backend**: PHP 7.4+ with Laravel Framework
+- **Frontend**: Vue.js for dynamic components
+- **Database**: MySQL/PostgreSQL
+- **Architecture**: Multi-tenant with single database
+- **APIs**: FBR Digital Invoicing API integration
 
-### Frontend
-- **React 18** with **TypeScript**
-- **Vite** for fast development and building
-- **Tailwind CSS** for styling
-- **Framer Motion** for animations
-- **React Query** for data fetching
-- **Zustand** for state management
-- **React Hook Form** for form handling
+## 📋 System Requirements
 
-### Additional Tools
-- **QR Code Generation**: qrcode library
-- **PDF Generation**: jsPDF + html2canvas
-- **Date Handling**: date-fns
-- **Charts**: Recharts
-- **Icons**: Heroicons
+### Minimum Requirements
+- **PHP**: 7.4 or higher
+- **MySQL**: 5.7 or higher (or PostgreSQL 10+)
+- **Memory**: 128MB or higher
+- **Disk Space**: 500MB or higher
+- **Extensions**: MySQL/PDO, cURL, GD, MBString, OpenSSL
 
-## 📋 Prerequisites
+### Recommended Requirements
+- **PHP**: 8.0 or higher
+- **MySQL**: 8.0 or higher
+- **Memory**: 256MB or higher
+- **Disk Space**: 1GB or higher
 
-Before you begin, ensure you have the following installed:
-- **Node.js** (v18 or higher)
-- **PostgreSQL** (v13 or higher)
-- **npm** or **yarn** package manager
-- **Git**
+## 🚀 Installation
 
-## 🚀 Quick Start
+### Quick Start
+1. Upload all files to your web server
+2. Navigate to `/install` in your browser
+3. Follow the graphical installer steps:
+   - System Requirements Check
+   - Database Configuration
+   - Super Admin Creation
+   - License Verification
+   - Final Installation
 
-### 1. Clone the Repository
-```bash
-git clone <repository-url>
-cd fbr-pos-system
+### Manual Installation
+1. Configure your web server to point to the `public` directory
+2. Set up your database and create a new database
+3. Copy `.env.example` to `.env` and configure your settings
+4. Run `composer install` to install dependencies
+5. Run `php artisan migrate` to create database tables
+6. Run `php artisan db:seed` to seed initial data
+
+## 📁 Project Structure
+
+```
+dpspos-fbr/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/     # Application controllers
+│   │   └── Middleware/      # Custom middleware
+│   ├── Services/           # Business logic services
+│   └── Traits/             # Reusable traits
+├── config/                 # Configuration files
+├── database/
+│   ├── migrations/         # Database migrations
+│   └── seeders/           # Database seeders
+├── install/               # Web installer
+├── public/                # Public web files
+├── resources/
+│   ├── views/             # Blade templates
+│   └── js/                # Vue.js components
+├── storage/               # File storage
+└── tests/                 # Test files
 ```
 
-### 2. Install Dependencies
-```bash
-# Install root dependencies
-npm install
+## 🔐 Security Features
 
-# Install all project dependencies
-npm run install:all
-```
+- **Multi-tenant Data Isolation** - Strict tenant-based data segregation
+- **Security Headers** - CSRF protection, XSS prevention
+- **Password Hashing** - Secure password storage
+- **API Rate Limiting** - Protection against abuse
+- **Input Validation** - Comprehensive data validation
+- **SQL Injection Prevention** - Prepared statements
 
-### 3. Environment Setup
+## 📊 FBR Integration
 
-#### Backend Environment
-Create a `.env` file in the `server` directory:
+### Supported Scenarios
+- **SN001-SN028** - All FBR invoice scenarios
+- **Automated Logic** - Pre-programmed scenario handling
+- **Offline Queuing** - Resilience during API downtime
+- **Error Translation** - User-friendly error messages
+- **Reference Caching** - Optimized API calls
 
+### API Endpoints
+- `validateinvoicedata` - Invoice validation
+- `postinvoicedata` - Invoice submission
+- Reference APIs for provinces, document types, HS codes, etc.
+
+## 🎨 Customization
+
+### Template System
+- **Tag-based Templates** - Easy customization with placeholders
+- **Multiple Formats** - Invoice, receipt, and report templates
+- **QR Code Integration** - FBR verification and internal verification
+- **Print Optimization** - Print-friendly layouts
+
+### Branding
+- **Company Logo** - Customizable branding
+- **Color Schemes** - Theme customization
+- **Email Templates** - Branded email notifications
+- **Receipt Design** - Custom receipt layouts
+
+## 📈 Reporting & Analytics
+
+### Available Reports
+- **Sales Reports** - Daily, weekly, monthly, yearly
+- **Inventory Reports** - Stock levels, movement, valuation
+- **Financial Reports** - Profit/loss, tax summaries
+- **Employee Reports** - Attendance, commissions, payroll
+- **FBR Reports** - Tax compliance and submission status
+
+### Export Formats
+- **PDF** - Print-ready reports
+- **CSV** - Data analysis
+- **Excel** - Advanced spreadsheet analysis
+
+## 🔧 Configuration
+
+### Environment Variables
 ```env
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/fbr_pos_db?schema=public"
-
-# JWT
-JWT_SECRET="your-super-secret-jwt-key-here"
-JWT_EXPIRES_IN="7d"
-
-# Server
-PORT=3001
-NODE_ENV="development"
-
-# FBR API (Default URLs - can be overridden per client)
-FBR_BASE_URL="https://gw.fbr.gov.pk/di_data/v1/di"
-FBR_SANDBOX_URL="https://sandbox.fbr.gov.pk/di_data/v1/di"
-
-# Encryption
-ENCRYPTION_KEY="your-32-character-encryption-key-here"
-
-# Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-
-# Logging
-LOG_LEVEL="info"
-LOG_FILE="logs/app.log"
+APP_NAME="DPS POS FBR Integrated"
+APP_ENV=production
+APP_DEBUG=false
+DB_CONNECTION=mysql
+DB_HOST=localhost
+DB_DATABASE=dpspos_fbr
+FBR_LICENSE_KEY=your-license-key
 ```
 
-#### Frontend Environment
-Create a `.env` file in the `client` directory:
-
-```env
-VITE_API_URL=http://localhost:3001/api
-VITE_APP_NAME=FBR POS System
-```
-
-### 4. Database Setup
-
-```bash
-# Navigate to server directory
-cd server
-
-# Generate Prisma client
-npm run db:generate
-
-# Run database migrations
-npm run db:migrate
-
-# (Optional) Open Prisma Studio to view data
-npm run db:studio
-```
-
-### 5. Start Development Servers
-
-```bash
-# From root directory - starts both frontend and backend
-npm run dev
-
-# Or start individually:
-# Backend only
-npm run dev:server
-
-# Frontend only
-npm run dev:client
-```
-
-### 6. Access the Application
-
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:3001
-- **API Documentation**: http://localhost:3001/health
-
-## 📱 Usage
-
-### 1. Initial Setup
-1. Visit http://localhost:5173
-2. Click "Register here" to create a new business account
-3. Fill in your business and admin user information
-4. Optionally add your FBR API token (can be added later in settings)
-
-### 2. FBR Integration Setup
-1. Go to Settings → Client Settings
-2. Enter your FBR API token
-3. Test the connection to ensure it's working
-4. Configure your business details for FBR compliance
-
-### 3. Basic Workflow
-1. **Add Products**: Go to Products → Add Product
-2. **Add Customers**: Go to Customers → Add Customer
-3. **Process Sales**: Go to Sales → New Sale
-4. **Submit to FBR**: Validate and submit invoices to FBR
-5. **View Reports**: Check sales, tax, and FBR compliance reports
-
-## 🔧 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new business and admin user
-- `POST /api/auth/login` - Login user
-- `GET /api/auth/profile` - Get current user profile
-- `PUT /api/auth/profile` - Update user profile
-- `PUT /api/auth/client-settings` - Update client settings
-- `GET /api/auth/test-fbr-connection` - Test FBR API connection
-
-### Products
-- `GET /api/products` - Get products with filtering and pagination
-- `POST /api/products` - Create new product
-- `PUT /api/products/:id` - Update product
-- `DELETE /api/products/:id` - Delete product
-- `GET /api/products/low-stock` - Get low stock products
-- `PUT /api/products/:id/stock` - Update product stock
-
-### Customers
-- `GET /api/customers` - Get customers with filtering and pagination
-- `POST /api/customers` - Create new customer
-- `PUT /api/customers/:id` - Update customer
-- `DELETE /api/customers/:id` - Delete customer
-- `GET /api/customers/search` - Search customers
-
-### Sales
-- `GET /api/sales` - Get sales with filtering and pagination
-- `POST /api/sales` - Create new sale
-- `GET /api/sales/:id` - Get sale details
-- `PUT /api/sales/:id/hold` - Hold sale
-- `PUT /api/sales/:id/resume` - Resume held sale
-- `POST /api/sales/:id/return` - Process return
-
-### Invoices & FBR
-- `POST /api/invoices/:id/validate` - Validate invoice with FBR
-- `POST /api/invoices/:id/submit` - Submit invoice to FBR
-- `GET /api/invoices/:id/pdf` - Generate invoice PDF
-- `GET /api/invoices/fbr-logs` - Get FBR submission logs
-
-### Reports
-- `GET /api/reports/sales` - Generate sales report
-- `GET /api/reports/tax` - Generate tax report
-- `GET /api/reports/fbr-compliance` - Generate FBR compliance report
-- `GET /api/reports/inventory` - Generate inventory report
-- `GET /api/reports/customers` - Generate customer report
-
-## 🏗 Project Structure
-
-```
-fbr-pos-system/
-├── client/                 # React frontend
-│   ├── src/
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/         # Page components
-│   │   ├── services/      # API services
-│   │   ├── store/         # State management
-│   │   ├── types/         # TypeScript types
-│   │   └── utils/         # Utility functions
-│   ├── public/            # Static assets
-│   └── package.json
-├── server/                # Node.js backend
-│   ├── src/
-│   │   ├── controllers/   # Route controllers
-│   │   ├── middleware/    # Express middleware
-│   │   ├── routes/        # API routes
-│   │   ├── services/      # Business logic
-│   │   ├── types/         # TypeScript types
-│   │   └── utils/         # Utility functions
-│   ├── prisma/            # Database schema and migrations
-│   └── package.json
-├── package.json           # Root package.json
-└── README.md
-```
-
-## 🔒 Security Features
-
-- **JWT Authentication**: Secure token-based authentication
-- **Password Hashing**: bcrypt for secure password storage
-- **Data Encryption**: Sensitive data encrypted at rest
-- **Rate Limiting**: API rate limiting to prevent abuse
-- **Input Validation**: Comprehensive input validation and sanitization
-- **CORS Protection**: Configured CORS for secure cross-origin requests
-- **Helmet Security**: Security headers with Helmet.js
-
-## 📊 FBR Compliance Features
-
-### Invoice Data Structure
-- Complete FBR-compliant invoice header and item structure
-- Automatic tax calculations based on FBR rates
-- Support for all FBR invoice types (SALE, DEBIT, CREDIT)
-- Proper handling of FBR reference data
-
-### Reference Data Integration
-- **Provinces**: Pakistani provinces for address validation
-- **HS Codes**: Harmonized System codes for product classification
-- **UOM Codes**: Unit of Measure codes
-- **Tax Rates**: Dynamic tax rate fetching from FBR
-- **SRO Schedules**: SRO schedule integration
-
-### Compliance Reporting
-- FBR submission status tracking
-- Detailed error logging and reporting
-- Compliance rate monitoring
-- Audit trail for all FBR interactions
+### FBR Settings
+- **Bearer Token** - Your FBR API token
+- **Environment** - Sandbox or Production
+- **Auto-sync** - Automatic invoice submission
+- **Error Handling** - Retry logic and notifications
 
 ## 🚀 Deployment
 
-### Production Build
-```bash
-# Build both frontend and backend
-npm run build
+### Production Deployment
+1. Set up a production server with PHP 7.4+
+2. Configure MySQL/PostgreSQL database
+3. Set up web server (Apache/Nginx)
+4. Configure SSL certificate
+5. Set up cron jobs for background tasks
+6. Configure email settings
+7. Set up backup procedures
 
-# Start production server
-npm start
+### Docker Deployment
+```dockerfile
+FROM php:8.0-fpm
+# Add your Dockerfile configuration
 ```
 
-### Environment Variables for Production
-Ensure all environment variables are properly set for production:
-- Use strong, unique secrets
-- Configure proper database connection
-- Set up proper CORS origins
-- Configure logging levels
-- Set up proper rate limiting
+## 📚 API Documentation
 
-### Database Migration
+### Authentication
+- **Bearer Token** - API authentication
+- **Tenant Scoping** - Multi-tenant API access
+- **Rate Limiting** - API usage limits
+
+### Endpoints
+- **POS API** - Sales and inventory management
+- **FBR API** - Tax integration
+- **Reporting API** - Analytics and reports
+- **User API** - User management
+
+## 🧪 Testing
+
+### Test Suite
+- **Unit Tests** - Individual component testing
+- **Integration Tests** - API and database testing
+- **Feature Tests** - End-to-end functionality testing
+- **FBR Tests** - Tax integration testing
+
+### Running Tests
 ```bash
-cd server
-npm run db:migrate
+php artisan test
+php artisan test --coverage
 ```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This is a commercial product. Please contact us for licensing information.
 
 ## 🆘 Support
 
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the API endpoints
+### Documentation
+- **User Manual** - Complete user guide
+- **API Documentation** - Developer reference
+- **Video Tutorials** - Step-by-step guides
+- **FAQ** - Frequently asked questions
 
-## 🔮 Roadmap
+### Support Channels
+- **Email Support** - support@dpspos.com
+- **Live Chat** - Available on our website
+- **Phone Support** - +92-XXX-XXXXXXX
+- **Community Forum** - User community support
 
-- [ ] Mobile app (React Native)
-- [ ] Advanced analytics dashboard
-- [ ] Multi-language support
-- [ ] Advanced inventory management
-- [ ] Integration with payment gateways
-- [ ] Barcode scanning support
-- [ ] Offline mode support
-- [ ] Advanced reporting features
+## 🔄 Updates
+
+### Version History
+- **v1.0.0** - Initial release with core features
+- **v1.1.0** - Enhanced FBR integration
+- **v1.2.0** - Advanced reporting features
+- **v1.3.0** - Mobile app integration
+
+### Update Process
+1. Download the latest version
+2. Backup your current installation
+3. Run the update script
+4. Verify all features are working
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our contributing guidelines for more information.
 
 ## 📞 Contact
 
-For business inquiries or technical support, please contact the development team.
+- **Website**: https://dpspos.com
+- **Email**: info@dpspos.com
+- **Phone**: +92-XXX-XXXXXXX
+- **Address**: Karachi, Pakistan
 
 ---
 
-**Note**: This system is specifically designed for businesses operating in Pakistan and requires proper FBR API credentials for full functionality. Ensure compliance with local tax regulations when using this system.
+**DPS POS FBR Integrated** - The Ultimate Business Solution for Pakistan's Retail Industry

@@ -1,284 +1,348 @@
-# DPS POS FBR Integrated
+# DPS POS FBR Integrated - Ultimate PHP SaaS Script
 
-A premier, multi-tenant, web-based Software as a Service (SaaS) Point of Sale (POS) platform specifically designed for Pakistani businesses. This system provides sophisticated sales, inventory, and compliance management with seamless integration to the FBR's Digital Invoicing (DI) API.
+## Overview
 
-## Features
+DPS POS FBR Integrated is a premier, multi-tenant PHP SaaS script designed specifically for the Pakistani market. It combines advanced point-of-sale functionality with intelligent FBR Digital Invoicing (DI) integration, providing a complete "business-in-a-box" solution for entrepreneurs.
 
-### 🏢 Multi-Tenant SaaS Architecture
-- **Super Admin**: Platform-wide management and tenant oversight
-- **Tenant Admin**: Business-specific management with FBR Integration Hub
-- **Cashier**: Streamlined POS interface for daily operations
+## Key Features
 
-### 🇵🇰 Pakistani Business Focus
-- **PKR Native**: All financial aspects configured for Pakistani Rupees
-- **FBR Integration**: Seamless compliance with Pakistan's tax system
-- **Mobile-First**: Optimized for tablets and smartphones
-- **WhatsApp Integration**: Digital receipts and admin notifications
+### 🚀 Easy UI Web Installer
+- Graphical step-by-step installation process
+- Server requirements validation
+- Database setup and configuration
+- Super Admin account creation
+- License key verification
 
-### 💳 Smart FBR Integration Engine
-- **Automatic Tax Calculation**: Handles all FBR sale types (Standard, 3rd Schedule, Exempt, etc.)
-- **Offline Resilience**: Continues operations even when FBR API is unavailable
-- **Error Translation**: Converts FBR error codes to user-friendly messages
-- **Background Sync**: Automatically retries failed submissions
+### 💻 High-Performance POS Screen
+- Blazing fast Vue.js single-page application
+- Barcode scanning support
+- Instant product search with keyboard shortcuts
+- FBR-compliant sale workflow with real-time validation
+- Offline queuing for FBR failures
 
-### 🛒 Modern POS Interface
-- **Intuitive Design**: Clean, fast interface requiring minimal training
-- **Real-time Inventory**: Live stock tracking with low-stock alerts
-- **Flexible Payments**: Support for Cash, Card, Easypaisa, and JazzCash
-- **QR Code Generation**: FBR-compliant and custom verification codes
+### 🏢 Advanced Business Management Suite
+- **Inventory & Stock Control**: Purchase orders, transfers, adjustments, low-stock alerts
+- **CRM & Supplier Management**: Customer groups, credit tracking, supplier profiles
+- **Human Resource Management**: Employee management, attendance tracking, payroll, tax certificates
+- **Financial Reporting**: Profit & loss, balance sheet, cash flow reports
+
+### 🔗 Intelligent FBR Integration Engine
+- FBR Integration Hub for tenant admins
+- Automated scenario logic for all FBR scenarios (SN001-SN028)
+- Offline queuing with cron job retries
+- Reference API caching for improved performance
+
+### 🎨 Deep Customization Features
+- Invoice & Receipt Template Editor with tag-based customization
+- Flexible QR Code System (FBR Official, DPS POS Verification, Disabled)
+- Email Notifications & SMTP Configuration
+- Multi-tenant settings management
+
+### 📊 Enterprise-Grade Reporting & Analytics
+- Fiscal Year Management
+- Advanced Report Filtering
+- Graphical Dashboards with charts
+- Multi-Format Export (PDF, CSV, Excel)
+
+### 🔧 Power Utilities
+- Bulk Data Import/Export with validation
+- Settings Import/Export
+- One-Click Full System Backup & Restore
+- Data cleanup and optimization tools
+
+## Technology Stack
+
+- **Backend**: PHP 8.1+ with Laravel Framework
+- **Frontend**: Vue.js 3 for dynamic components
+- **Database**: MySQL 8.0+ or PostgreSQL 13+
+- **Multi-Tenancy**: Single database with `tenant_id` scoping
+- **Caching**: Redis for performance optimization
+- **Queue**: Laravel Queue for background jobs
 
 ## Installation
 
-### Requirements
-- PHP 7.4 or higher
-- MySQL 5.7 or higher
-- Apache/Nginx web server
-- SSL certificate (recommended for production)
+### Prerequisites
 
-### Quick Installation
+- PHP 8.1 or higher
+- MySQL 8.0+ or PostgreSQL 13+
+- Redis (optional but recommended)
+- Composer
+- Node.js 16+ (for frontend assets)
 
-1. **Upload Files**
+### Quick Start
+
+1. **Download and Extract**
    ```bash
-   # Upload all files to your web server
-   # Ensure the web server has write permissions to the uploads/ directory
+   # Extract the files to your web server directory
+   unzip dps-pos-fbr-integrated.zip
+   cd dps-pos-fbr-integrated
    ```
 
-2. **Run Installation Wizard**
-   - Navigate to `yourdomain.com/install/`
-   - Follow the beautiful installation wizard
-   - Configure database settings
-   - Create super admin account
-   - Set application preferences
-
-3. **Configure FBR Integration**
-   - Login as Tenant Admin
-   - Go to FBR Integration Hub
-   - Enter your FBR Bearer Token
-   - Choose Sandbox or Production mode
-   - Test the connection
-
-### Manual Installation
-
-1. **Database Setup**
-   ```sql
-   CREATE DATABASE dpspos_fbr CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-
-2. **Import Schema**
+2. **Install Dependencies**
    ```bash
-   mysql -u username -p dpspos_fbr < install/database.sql
+   composer install
+   npm install
    ```
 
-3. **Configure Database**
-   ```php
-   // Edit config/database.php
-   $db_config = [
-       'host' => 'localhost',
-       'username' => 'your_username',
-       'password' => 'your_password',
-       'database' => 'dpspos_fbr'
-   ];
-   ```
+3. **Run Web Installer**
+   - Navigate to `http://yourdomain.com/install`
+   - Follow the graphical installation wizard
+   - Complete server requirements check
+   - Configure database connection
+   - Create Super Admin account
+   - Verify license key
 
-4. **Set Permissions**
+4. **Build Frontend Assets**
    ```bash
-   chmod 755 uploads/
-   chmod 644 config/*.php
+   npm run build
+   ```
+
+5. **Set Permissions**
+   ```bash
+   chmod -R 755 storage bootstrap/cache
+   chown -R www-data:www-data storage bootstrap/cache
    ```
 
 ## Configuration
 
-### FBR API Setup
+### Environment Setup
 
-1. **Get FBR Credentials**
-   - Register at FBR Digital Invoicing portal
-   - Obtain your Bearer Token
-   - Note your business NTN and other details
+Copy the `.env.example` to `.env` and configure:
 
-2. **Configure in DPS POS**
-   - Login as Tenant Admin
+```env
+APP_NAME="DPS POS FBR Integrated"
+APP_ENV=production
+APP_KEY=base64:your-app-key
+APP_DEBUG=false
+APP_URL=http://yourdomain.com
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=dps_pos
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+
+CACHE_DRIVER=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+```
+
+### FBR Integration Setup
+
+1. **Obtain FBR Credentials**
+   - Register with FBR for Digital Invoicing
+   - Get your Bearer Token
+   - Choose between Sandbox and Production
+
+2. **Configure FBR Settings**
    - Navigate to FBR Integration Hub
-   - Enter Bearer Token
-   - Select Sandbox (testing) or Production mode
+   - Enter your Bearer Token
+   - Select environment (Sandbox/Production)
    - Test connection
 
-### Business Setup
-
-1. **Complete Business Profile**
-   - Business name and type
-   - NTN and STRN numbers
-   - Complete address information
-   - Upload business logo
-
-2. **Add Products**
-   - Create product categories
-   - Add products with proper tax classifications
-   - Set HS codes and units of measure
-   - Configure stock levels
-
-3. **Setup Staff**
-   - Create cashier accounts
-   - Set appropriate permissions
-   - Train staff on POS interface
+3. **Set Up Scenarios**
+   - Configure appropriate FBR scenarios
+   - Set up product tax categories
+   - Test with sample transactions
 
 ## Usage
 
-### For Cashiers
+### POS Operations
 
-1. **Login to POS**
-   - Navigate to POS interface
-   - Use your assigned credentials
+1. **Start a Sale**
+   - Scan barcode or search for products
+   - Add items to cart
+   - Apply discounts if needed
 
-2. **Process Sales**
-   - Add products to cart by clicking
-   - Adjust quantities as needed
-   - Select customer (optional)
-   - Choose payment method
-   - Complete checkout
+2. **Process Payment**
+   - Click "Finalize Sale"
+   - Select payment method
+   - FBR validation occurs automatically
+   - Print receipt or send via WhatsApp
 
-3. **View Sales History**
-   - Check today's sales
-   - Monitor FBR sync status
-   - Print receipts as needed
+3. **Handle FBR Failures**
+   - System shows user-friendly error messages
+   - Option to save as draft or cancel sale
+   - Automatic retry in background
 
-### For Tenant Admins
+### Inventory Management
 
-1. **Dashboard Overview**
-   - Monitor daily sales and revenue
-   - Check FBR sync status
-   - View low stock alerts
-   - Review recent activities
+1. **Add Products**
+   - Use bulk import or manual entry
+   - Set up categories and tax settings
+   - Configure stock levels and reorder points
 
-2. **FBR Management**
-   - Configure FBR settings
-   - Monitor sync status
-   - Handle failed submissions
-   - Sync reference data
+2. **Manage Stock**
+   - Process purchase orders
+   - Handle stock transfers
+   - Monitor low stock alerts
 
-3. **Business Management**
-   - Manage products and inventory
-   - Add/edit staff accounts
-   - Configure business settings
-   - Generate reports
+3. **Track Movements**
+   - View stock movement history
+   - Generate inventory reports
+   - Analyze turnover rates
 
-### For Super Admins
+### Reporting
 
-1. **Platform Management**
-   - Monitor all tenants
-   - Manage subscriptions
-   - View platform statistics
-   - Handle support requests
+1. **Sales Reports**
+   - Daily, weekly, monthly summaries
+   - Product performance analysis
+   - Customer insights
 
-2. **Remote Support**
-   - Impersonate tenant accounts
-   - Troubleshoot issues
-   - Provide technical support
+2. **Financial Reports**
+   - Profit & Loss statements
+   - Balance sheet
+   - Cash flow analysis
 
-## FBR Integration Details
+3. **Export Options**
+   - PDF, CSV, Excel formats
+   - Bulk export capabilities
+   - Scheduled reports
 
-### Supported Sale Types
+## API Documentation
 
-- **Standard Rate Goods (18%)**: Regular taxable items
-- **Third Schedule Items**: Tax on retail price (MRP)
-- **Reduced Rate Goods (5%)**: Items with reduced tax rate
-- **Exempt Items**: Tax-free products
-- **Steel Items**: Special category for steel products
+### Authentication
 
-### API Endpoints
+All API requests require authentication via Bearer token:
 
-- **Sandbox**: `https://gw.fbr.gov.pk/di_data/v1/di/`
-- **Production**: `https://gw.fbr.gov.pk/di_data/v1/di/`
-- **Reference Data**: `https://gw.fbr.gov.pk/pdi/v1/`
+```bash
+curl -H "Authorization: Bearer your-token" \
+     -H "Content-Type: application/json" \
+     https://yourdomain.com/api/sales
+```
 
-### Error Handling
+### Key Endpoints
 
-The system automatically translates FBR error codes:
-- `0001`: Business not registered for sales tax
-- `0002`: Invalid customer NTN/CNIC
-- `0021`: Missing value of sales
-- `0052`: Incorrect HS code
-- And many more...
+- `GET /api/sales` - List sales
+- `POST /api/sales` - Create new sale
+- `GET /api/products` - List products
+- `POST /api/products` - Create product
+- `GET /api/reports/sales` - Sales report
+- `POST /api/fbr/validate` - Validate with FBR
+
+## Multi-Tenancy
+
+The system uses a single database with `tenant_id` scoping for data segregation:
+
+- Each tenant has isolated data
+- Shared infrastructure for cost efficiency
+- Automatic tenant context switching
+- Secure data separation
 
 ## Security Features
 
-- **Multi-tenant Isolation**: Complete data separation between businesses
-- **Role-based Access**: Granular permissions for different user types
-- **CSRF Protection**: Built-in protection against cross-site attacks
-- **SQL Injection Prevention**: Prepared statements throughout
-- **XSS Protection**: Input sanitization and output escaping
-- **Secure File Uploads**: Validated file types and sizes
+- **Data Encryption**: All sensitive data encrypted at rest
+- **API Security**: Rate limiting and authentication
+- **SQL Injection Protection**: Parameterized queries
+- **XSS Protection**: Input sanitization and output encoding
+- **CSRF Protection**: Token-based protection
+- **Security Headers**: Comprehensive security headers
 
-## WhatsApp Integration
+## Performance Optimization
 
-### Digital Receipts
-- Send receipt links via WhatsApp
-- Professional receipt formatting
-- QR code verification
+- **Caching**: Redis-based caching for frequently accessed data
+- **Database Optimization**: Indexed queries and connection pooling
+- **Image Optimization**: Automatic image compression
+- **CDN Support**: Static asset delivery optimization
+- **Background Jobs**: Queue-based processing for heavy tasks
 
-### Admin Notifications
-- Daily sales summaries
-- Low stock alerts
-- FBR sync status updates
-- System notifications
+## Backup & Recovery
 
-## QR Code System
+### Automatic Backups
 
-### FBR Fiscalized Mode
-- Official FBR QR codes
-- Contains FBR invoice number
-- Compliant with FBR specifications
+- Daily incremental backups
+- Weekly full backups
+- Configurable retention periods
+- Encrypted backup files
 
-### DPS POS Verification
-- Custom verification QR codes
-- Links to public verification page
-- "Verified by DPS POS" seal
+### Manual Backup
 
-### Non-Fiscalized Mode
-- Standard POS without FBR
-- Internal QR codes for verification
-- Suitable for non-registered businesses
+```bash
+php artisan backup:create --tenant=1
+```
+
+### Restore
+
+```bash
+php artisan backup:restore --file=backup-file.zip
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **FBR Connection Failed**
+1. **FBR Integration Failures**
    - Check Bearer Token validity
    - Verify network connectivity
-   - Ensure correct API endpoints
+   - Check FBR service status
 
-2. **Installation Issues**
-   - Check PHP version compatibility
-   - Verify database permissions
-   - Ensure file upload limits
+2. **Performance Issues**
+   - Clear cache: `php artisan cache:clear`
+   - Optimize database: `php artisan optimize`
+   - Check server resources
 
-3. **Performance Issues**
-   - Enable PHP OPcache
-   - Optimize database queries
-   - Use CDN for static assets
+3. **Installation Problems**
+   - Verify PHP version and extensions
+   - Check file permissions
+   - Review error logs
 
-### Support
+### Logs
 
-For technical support and questions:
-- Check the documentation
-- Review error logs
-- Contact system administrator
+- Application logs: `storage/logs/laravel.log`
+- FBR logs: `storage/logs/fbr.log`
+- Performance logs: `storage/logs/performance.log`
+
+## Support
+
+### Documentation
+- Complete API documentation
+- Video tutorials
+- User guides
+- Developer documentation
+
+### Community
+- GitHub Issues
+- Community Forum
+- Discord Server
+
+### Professional Support
+- Priority support for licensed users
+- Custom development services
+- Training and consultation
 
 ## License
 
-This software is proprietary and licensed for use according to the terms of purchase.
+This software is proprietary and licensed for commercial use. See LICENSE file for details.
 
-## Version History
+## Changelog
 
-### v1.0.0
+### Version 1.0.0
 - Initial release
-- Multi-tenant SaaS architecture
-- FBR Digital Invoicing integration
-- Modern POS interface
-- WhatsApp integration
-- QR code system
-- Mobile-first design
+- Complete FBR integration
+- Multi-tenant architecture
+- Advanced reporting
+- Template system
+- Backup and restore
+
+## Contributing
+
+We welcome contributions! Please see CONTRIBUTING.md for guidelines.
+
+## Roadmap
+
+- [ ] Mobile app integration
+- [ ] Advanced analytics dashboard
+- [ ] Multi-language support
+- [ ] Advanced inventory forecasting
+- [ ] Integration with popular e-commerce platforms
 
 ---
 
-**DPS POS FBR Integrated** - Empowering Pakistani businesses with world-class POS technology and seamless tax compliance.
+**DPS POS FBR Integrated** - The ultimate business solution for the Pakistani market.
+
+For more information, visit [our website](https://dpspos.com) or contact us at support@dpspos.com.
